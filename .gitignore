@@ -1,0 +1,5 @@
+PMP/Temp
+*.csproj
+*.sln
+PMP/Logs/
+PMP/Library/
