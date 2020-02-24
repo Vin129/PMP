@@ -1,4 +1,6 @@
-﻿Shader "Unlit/DiffusePixeLevel"
+﻿// Upgrade NOTE: replaced '_World2Object' with 'unity_WorldToObject'
+
+Shader "Unlit/Diffuse/DiffuseVertexLevel"
 {
 	Properties
 	{
@@ -28,29 +30,28 @@
 
 			struct v2f
 			{
+				fixed3 color :Color;
 				float4 vertex : SV_POSITION;
-				float3 worldNormal : TEXCOORD0;
 			};
 			
 			v2f vert (a2v v)
 			{
 				v2f o;
 				o.vertex = UnityObjectToClipPos(v.vertex);
-				o.worldNormal = normalize(mul(v.normal,(float3x3)unity_WorldToObject));
+
+				fixed3 ambient = UNITY_LIGHTMODEL_AMBIENT.xyz;
+
+				fixed3 worldNormal = normalize(mul(v.normal,(float3x3)unity_WorldToObject));
+				fixed3 worldLight = normalize(_WorldSpaceLightPos0.xyz);
+
+				fixed3 diffuse = _LightColor0.rgb * _Diffuse.rgb * saturate(dot(worldNormal,worldLight));
+				o.color = ambient + diffuse;
 				return o;
 			}
 			
 			fixed4 frag (v2f i) : SV_Target
 			{
-				fixed3 ambient = UNITY_LIGHTMODEL_AMBIENT.xyz;
-
-				
-				fixed3 worldLight = normalize(_WorldSpaceLightPos0.xyz);
-
-				fixed3 diffuse = _LightColor0.rgb * _Diffuse.rgb * saturate(dot(i.worldNormal,worldLight));
-				fixed3 color = ambient + diffuse;
-
-				return fixed4(color,1);
+				return fixed4(i.color,1);
 			}
 			ENDCG
 		}	

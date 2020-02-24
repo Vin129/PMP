@@ -1,4 +1,4 @@
-﻿Shader "Unlit/HalfLambert"
+﻿Shader "Unlit/Diffuse/HalfLambert"
 {
 	Properties
 	{

@@ -1,6 +1,6 @@
-﻿Shader "Unlit/SpecularPixeLevel"
+﻿Shader "Unlit/Specular/BlinnPhong"
 {
-	Properties
+Properties
 	{
 		_Diffuse ("Color", Color) = (1,1,1,1)
 		_Specular ("高光反射颜色",Color) = (1,1,1,1)
@@ -42,19 +42,23 @@
 				v2f o;
 				o.worldPos = v.vertex;
 				o.vertex = UnityObjectToClipPos(v.vertex);
-				o.worldNormal = normalize(mul(v.normal,(float3x3)unity_WorldToObject));
+				// o.worldNormal = normalize(mul(v.normal,(float3x3)unity_WorldToObject));
+				o.worldNormal = normalize(UnityObjectToWorldNormal(v.normal));
 				return o;
 			}
 			
 			fixed4 frag (v2f i) : SV_Target
 			{
 				fixed3 ambient = UNITY_LIGHTMODEL_AMBIENT.xyz;	
-				fixed3 worldLight = normalize(_WorldSpaceLightPos0.xyz);
+				// fixed3 worldLight = normalize(_WorldSpaceLightPos0.xyz); //这个太局限与平行光照
+				fixed3 worldLight = UnityWorldSpaceLightDir(i.worldPos);
 				fixed3 diffuse = _LightColor0.rgb * _Diffuse.rgb * saturate(dot(i.worldNormal,worldLight));
 				
-				fixed3 reflectDir = normalize(reflect(-worldLight,i.worldNormal));
-				fixed3 viewDir = normalize(_WorldSpaceCameraPos.xyz - mul(unity_ObjectToWorld,i.worldPos));
-				fixed3 specular = _LightColor0.rgb * _Specular.rgb * pow(saturate(dot(viewDir,reflectDir)),_Gloss);
+				
+				// fixed3 viewDir = normalize(_WorldSpaceCameraPos.xyz - mul(unity_ObjectToWorld,i.worldPos));
+				fixed3 viewDir = normalize(UnityWorldSpaceViewDir(i.worldPos));
+				fixed3 blinnDir = normalize(viewDir + worldLight);
+				fixed3 specular = _LightColor0.rgb * _Specular.rgb * pow(saturate(dot(i.worldNormal,blinnDir)),_Gloss);
 				
 				fixed3 color = ambient + diffuse + specular;
 
