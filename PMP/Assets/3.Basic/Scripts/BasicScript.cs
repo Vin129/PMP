@@ -8,7 +8,8 @@ public class BasicScript : MonoBehaviour {
 	private  int[] mSortArray = {6,2,1,3,8,7,5,4,9,10,5};
 	
 	void Start () {
-		mSortArray.SortByMerge().Log();
+		// mSortArray.SortByMerge().Log();
+		Debug.Log(2.DAR_Power(30));
 	}
 
 
@@ -87,7 +88,7 @@ public static class BaseUtil
 		{
 			if(i>= A.Length)
 				S[index] = B[j++];
-			else if(j >= B.Length)
+			else if(j >= B.Length) 
 				S[index] = A[i++];
 			else if (A[i] < B[j])
 				S[index] = A[i++];
@@ -96,5 +97,31 @@ public static class BaseUtil
 		}
 		return S;
 	}
+#endregion
+
+#region Divide And Rule
+	public static int DAR_Power(this int Num,int N)
+	{
+		return PowerForDivide(Num,N); 
+	}
+
+	private static int PowerForDivide(int x ,  int n)
+	{
+		if(n == 0)
+			return 1;
+		if(n == 1)
+			return x;
+		int newN;
+		if(n%2 == 0)
+		{
+			newN = n/2;
+			return PowerForDivide(x*x,newN);
+		}
+		else{
+			newN = (n-1)/2;
+			return PowerForDivide(x*x,newN)*x;
+		}
+	}
+
 #endregion
 }
