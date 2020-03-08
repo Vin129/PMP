@@ -123,5 +123,23 @@ public static class BaseUtil
 		}
 	}
 
+
 #endregion
+
+#region Fibonacci 
+	public static int GetFibonacciByRecursion(this int index)
+	{
+		return G_Fibonacci_Recursion(index);
+	}
+	private static int G_Fibonacci_Recursion(int index)
+	{
+		if(index == 0)
+			return 0;
+		if(index == 1)
+			return 1;
+		return G_Fibonacci_Recursion(index - 1) + G_Fibonacci_Recursion(index - 2);
+	}
+
+#endregion
+
 }
