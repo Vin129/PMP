@@ -1,6 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-
+using System;
 public class SimpleSkill{
 	
 	public SimpleSkill(){}
@@ -55,4 +55,39 @@ public class SimpleSkill{
 		((SKILL_2_Interface)s2).Print();//2
 	}
 	#endregion
+
 }
+
+#region SKILL 9
+	public class SimpleEventClass
+	{
+		public int A;
+		public class TempEventArgs:System.EventArgs{}
+
+		public event Action<int> TempAction = delegate{};
+		public event EventHandler<TempEventArgs> TempEvent = delegate{};
+
+
+		public void Add(Action<int> action,EventHandler<TempEventArgs> e)
+		{
+			// TempAction += (int a)=>{};
+			TempAction += action;
+			// TempEvent += (object sender,TempEventArgs a) => {};
+			TempEvent += e;
+		}
+		public void Invoke(){
+			TempAction(1);
+			TempEvent(this,new TempEventArgs());
+		}
+	}
+
+	public class TestClass{
+		public TestClass(){
+			SimpleEventClass eClass = new SimpleEventClass();
+			eClass.TempAction += (int a)=>{};
+			eClass.TempAction -= (int a)=>{};
+			// eClass.TempAction(1);
+			// eClass.TempAction = (int a) =>{};
+		}
+	}
+#endregion
