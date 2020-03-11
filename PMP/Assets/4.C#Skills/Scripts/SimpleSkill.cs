@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using System;
+using System.Linq;
 public class SimpleSkill{
 	
 	public SimpleSkill(){}
@@ -56,6 +57,35 @@ public class SimpleSkill{
 	}
 	#endregion
 
+
+#region SKILL 11
+	public void Skill11(){
+		List<int> a = new List<int>();
+		a.Add(3);
+		var q = a.Where(x=>(x%2) == 0);
+		q = q.Select(x=>x*10);
+		
+		a.Add(2);
+		a.Add(4);
+		UnityEngine.Debug.Log(a[1]);
+		UnityEngine.Debug.Log("---foreach a----");
+		foreach(int v in a)
+		{
+			UnityEngine.Debug.Log(v);
+		}
+		UnityEngine.Debug.Log("---foreach q----");
+		foreach(int v in q)
+		{
+			UnityEngine.Debug.Log(v);
+		}
+		UnityEngine.Debug.Log("---foreach q again----");
+		foreach(int v in q)
+		{
+			UnityEngine.Debug.Log(v);
+		}
+
+	}
+#endregion
 }
 
 #region SKILL 9

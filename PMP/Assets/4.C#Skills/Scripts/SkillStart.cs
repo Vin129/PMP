@@ -6,7 +6,7 @@ public class SkillStart : MonoBehaviour {
 	SimpleSkill mSimpleSkill;
 	void Start () {
 		mSimpleSkill = new SimpleSkill();
-		mSimpleSkill.Skill2();
+		mSimpleSkill.Skill11();
 	}
 	void Update () {
 		
