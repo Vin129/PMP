@@ -2,6 +2,12 @@
 using System.Collections.Generic;
 using System;
 using System.Linq;
+using System.Reflection;
+using System.IO;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.ComponentModel;
+
+[assembly:AssemblyVersion("1.0.0")]
 public class SimpleSkill{
 	
 	public SimpleSkill(){}
@@ -120,4 +126,45 @@ public class SimpleSkill{
 			// eClass.TempAction = (int a) =>{};
 		}
 	}
+#endregion
+
+#region  SKILL 13
+[SimpleCalledClass]
+public class Skill13Class{
+	[return:Description("Call Hellow")]
+	public void Hellow(){
+		UnityEngine.Debug.Log("Hello world!");
+		// Serialize();
+		// Deserialize();
+	}
+
+	public void Serialize(){
+		using(Stream stream = File.Open("Test.bin",FileMode.Create)){
+			BinaryFormatter formatter = new BinaryFormatter();
+			formatter.Serialize(stream,new Skill13Data("Hello world"));
+		}
+	}
+
+	public void Deserialize(){
+		using(Stream stream = File.Open("Test.bin",FileMode.Open)){
+			BinaryFormatter formatter = new BinaryFormatter();
+			var data = (Skill13Data)formatter.Deserialize(stream);
+			UnityEngine.Debug.Log(data.content);
+			UnityEngine.Debug.Log(data.name);
+		}
+	}
+}
+
+[Serializable]
+public class Skill13Data
+{
+	public string content;
+	[NonSerialized]
+	public string name;
+	public Skill13Data(string content){
+		name = "Skill13Dara";
+		this.content = content;
+	}
+}
+
 #endregion
