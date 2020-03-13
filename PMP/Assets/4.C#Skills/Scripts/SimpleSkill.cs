@@ -1,4 +1,6 @@
-﻿using System.Collections;
+﻿// #define NET_40
+#define NET_35
+using System.Collections;
 using System.Collections.Generic;
 using System;
 using System.Linq;
@@ -6,6 +8,10 @@ using System.Reflection;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.ComponentModel;
+using System.Threading;
+#if NET_40
+using System.Threading.Tasks;
+#endif
 
 [assembly:AssemblyVersion("1.0.0")]
 public class SimpleSkill{
@@ -167,4 +173,49 @@ public class Skill13Data
 	}
 }
 
+#endregion
+
+#region SKILL 14
+	public class SKill14Class
+	{
+		public void DoThread(){
+#if NET_35
+			ThreadStart ts =  SubThread;
+			Thread subT = new Thread(ts);
+			subT.Start();
+			while(subT.IsAlive)
+			{
+				UnityEngine.Debug.Log("A");
+			}
+			for(int i = 0;i<10000;i++)
+			{
+				UnityEngine.Debug.Log("-");
+			}
+			// subT.Join();
+#elif NET_40
+			Task t = new Task(()=>{
+				for(int i = 0;i<10000;i++)
+				{
+					UnityEngine.Debug.Log("-");
+				}
+			});
+			Task task = Task.Run(()=>{
+				for(int i = 0;i<10000;i++)
+				{
+					UnityEngine.Debug.Log("+");
+				}
+			});
+			t.Start();
+			task.Wait();
+
+#endif
+		}
+		
+		public void SubThread(){
+			for(int i = 0;i<10000;i++)
+			{
+				UnityEngine.Debug.Log("+");
+			}
+		}
+	}
 #endregion

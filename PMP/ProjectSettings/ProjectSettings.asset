@@ -639,7 +639,7 @@ PlayerSettings:
       daydreamIconBackground: {fileID: 0}
   cloudServicesEnabled: {}
   facebookSdkVersion: 7.9.4
-  apiCompatibilityLevel: 2
+  apiCompatibilityLevel: 3
   cloudProjectId: d49f5dac-a155-4131-b9a6-67fff7dc5a93
   projectName: PMP
   organizationId: vin129
