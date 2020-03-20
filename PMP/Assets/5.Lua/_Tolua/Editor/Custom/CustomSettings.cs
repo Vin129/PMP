@@ -11,7 +11,7 @@ public static class CustomSettings
 {
     public static string saveDir = Application.dataPath + "/5.Lua/_Tolua/Source/Generate/";    
     public static string toluaBaseType = Application.dataPath + "/5.Lua/_Tolua/ToLua/BaseType/";
-    public static string baseLuaDir = Application.dataPath + "/5.Lua/_Tolua/Tolua/Lua/";
+    public static string baseLuaDir = Application.dataPath + "/5.Lua/_Tolua/Lua/";
     public static string injectionFilesPath = Application.dataPath + "/5.Lua/_Tolua/ToLua/Injection/";
 
     //导出时强制做为静态类的类型(注意customTypeList 还要添加这个类型才能导出)
@@ -113,6 +113,12 @@ public static class CustomSettings
         _GT(typeof(AsyncOperation)).SetBaseType(typeof(System.Object)),        
         _GT(typeof(LightType)),
         _GT(typeof(SleepTimeout)),
+
+
+        _GT(typeof(LuaKit.LuaHelper)),
+        _GT(typeof(LuaKit.UIHelper)),
+
+        
 #if UNITY_5_3_OR_NEWER && !UNITY_5_6_OR_NEWER
         _GT(typeof(UnityEngine.Experimental.Director.DirectorPlayer)),
 #endif
