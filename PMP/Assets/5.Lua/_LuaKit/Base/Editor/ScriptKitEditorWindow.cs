@@ -19,7 +19,8 @@ namespace LuaKit
         private string scriptPathTail;
         private string scriptPath;
   
-        [MenuItem("PMP/5.LuaKit/Setting #S")]
+        // [MenuItem("PMP/5.LuaKit/Setting #S")]
+        [MenuItem("PMP/5.LuaKit/Setting")]
         public static void ShowWindow()
         {
             instance = EditorWindow.GetWindow<ScriptKitEditorWindow>();
