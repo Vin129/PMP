@@ -1,0 +1,203 @@
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEditor;
+using EGL = UnityEditor.EditorGUILayout;
+using GL = UnityEngine.GUILayout;
+using System;
+using PMP.Extension;
+using System.Linq;
+using System.Reflection;
+using System.Text.RegularExpressions;
+using System.IO;
+
+public class QuickExecuteEditor : EditorWindow {
+	[Flags]
+	enum QEType
+	{
+		None,
+		CSharp,
+		Lua,
+	}
+
+	[MenuItem("PMP/6.UnityEditor/QuickExecute %&Q")]
+	private static void ShowWindow() {
+		var window = GetWindow<QuickExecuteEditor>();
+		window.minSize = new Vector2(700,300);
+		window.titleContent = new GUIContent("QuickExecute");
+		window.Show();
+	}
+
+	private bool searchScript = false;
+	private void OnGUI() {
+		GUI.skin.label.richText = true;
+
+		if(GL.Button("Search Can Execute Script"))
+		{
+			searchScript = true;
+			DoSearch();
+		}
+		if(searchScript == true)
+			DrawSearchResult();
+		if(focusFileName.IsNullOrEmpty())
+		{
+			DrawDragSpace();
+		}
+		else
+		{
+			GL.Space(5);
+			GL.BeginVertical("box");
+			GL.Label(string.Format("FocusFileName : {0}",focusFileName),EditorStyles.boldLabel);
+			GL.Label(string.Format("FocusFileType : {0}",focusFileType.ToString()),EditorStyles.boldLabel);
+			GL.Label(string.Format("FocusFilePath : {0}",focusFilePath),EditorStyles.boldLabel);
+			focusFileRect = GL.BeginScrollView(focusFileRect,"box");
+			if(focusFileType == QEType.CSharp)
+				DrawScript(GetFocusFileType(focusFileName));
+			if(focusFileType == QEType.Lua)
+				DrawLuaScript(focusFilePath);
+			if(GL.Button("ClearFocus"))
+			{
+				ClearFocusFile();
+			}
+			GL.EndScrollView();
+			GL.EndVertical();
+		}
+	}
+
+	private Vector2 focusFileRect;
+	private string focusFileName = string.Empty;
+	private string focusFilePath = string.Empty;
+	private	QEType focusFileType = QEType.None;
+	private void DrawDragSpace(){
+		EditorGUILayout.LabelField("请将脚本文件拖到下边区域");
+		var sfxPathRect = EditorGUILayout.GetControlRect(GUILayout.Height(100));
+		GUI.Box(sfxPathRect, string.Empty);
+		// EditorGUILayout.LabelField(string.Empty, GUILayout.Height(185));
+		if (Event.current.type == EventType.DragUpdated&& sfxPathRect.Contains(Event.current.mousePosition))
+		{
+			DragAndDrop.visualMode = DragAndDropVisualMode.Generic;
+		}
+		if(Event.current.type == EventType.DragPerform && sfxPathRect.Contains(Event.current.mousePosition))
+		{
+			string path = null;
+			if(DragAndDrop.paths != null && DragAndDrop.paths.Length > 0)
+				path = DragAndDrop.paths[0];
+			if(DragAndDrop.objectReferences != null && DragAndDrop.objectReferences.Length > 0)
+			{
+				if(path != null && path.EndsWith(".cs") || path.EndsWith(".lua"))
+				{
+					focusFileName = DragAndDrop.objectReferences[0].name;
+					focusFilePath = path;
+				}
+			}
+			if(focusFileName.IsNullOrEmpty())
+			{
+				Log.W("Incorrect file");
+				ShowNotification(new GUIContent("Incorrect file (Nonconforming .cs or .lua)"));
+			}
+			else
+			{
+				if(path.EndsWith(".cs"))
+				{
+					focusFileType = QEType.CSharp;
+					if(GetFocusFileType(focusFileName) == null)
+					{
+						var msg = "File Name : <color=#FF0000>{0}</color>\nmake sure .cs file is correct (name same as TypeName)";
+						Log.W(string.Format(msg,focusFileName));
+						ShowNotification(new GUIContent(string.Format("Incorrect  {0}",focusFileName)));
+						ClearFocusFile();
+					}
+				}
+				if(path.EndsWith(".lua"))
+					focusFileType = QEType.Lua;
+			}
+		}
+	}
+
+	private void ClearFocusFile()
+	{
+		focusFileName = string.Empty;
+		focusFilePath = string.Empty;
+		focusFileType = QEType.None;
+	}	
+
+	private Type GetFocusFileType(string name)
+	{
+		var types = ReflectionTools.GetAllTypes(false).Where((t)=>{
+			var att = t.RTGetAttribute<QuickExecuteAttribute>(false);
+			return(att != null && att.CanSearch && t.Name.Equals(name));
+		});
+		if(types.Count() < 1)
+			return null;
+		return types.ToArray()[0];
+	}
+
+	private List<Type> searchTypeList;
+	private void DoSearch()
+	{
+		searchTypeList = new List<Type>();
+		var types = ReflectionTools.GetAllTypes(false).Where((t)=>{
+			var att = t.RTGetAttribute<QuickExecuteAttribute>(false);
+			return(att != null && att.CanSearch);
+		});
+		searchTypeList = types.ToList();
+	}
+	private Vector2 scrollRect;
+	private void DrawSearchResult()
+	{
+		if(searchTypeList.Count < 1)
+			return;
+		scrollRect = GL.BeginScrollView(scrollRect,"box");
+		searchTypeList.ForEach((t)=>{
+			DrawScript(t);
+			GL.Space(5);
+		});
+		GL.EndScrollView();
+	}
+	private void DrawScript(Type t)
+	{
+		var att = t.RTGetAttribute<QuickExecuteAttribute>(false);
+		if(att == null)
+			return;
+		GL.BeginVertical("box");
+		GL.Label(t.Name,EditorStyles.boldLabel);
+		var methods  = t.GetMethods().Where((i)=>{return i.RTGetAttribute<ExecuteMethodAttribute>(false) != null;});
+		if(methods.Count() < 1)
+		{
+			EGL.HelpBox("没有可以被执行的方法(请检查是否添加了[ExecuteMethodAttribute])",MessageType.Warning);
+		}
+		else
+		{
+			foreach (var m in methods)
+			{
+				GL.BeginHorizontal("box");
+				var methodName = m.Name + ":(";
+				var param = m.GetParameters();
+				for(int i = 0;i<param.Length;i++)
+				{
+					var p = param[i];
+					if(i != param.Length - 1)
+						methodName += string.Format("<b>{0}</b> , ",p.ToString());
+					else
+						methodName += string.Format("<b>{0}</b>",p.ToString());				
+				}
+				methodName += ")";
+				GL.Label(methodName);
+				if(GL.Button("Execute",GUILayout.Width(100)))
+				{
+					var o = ReflectionTools.CreateObject(t);	
+					if(param.Length == 0)
+						m.Invoke(o,null);
+				}
+				GL.EndHorizontal();
+				GL.Space(2);
+			}
+		}
+		GL.EndVertical();
+	}
+
+	private void DrawLuaScript(string path)
+	{
+
+	}
+} 
