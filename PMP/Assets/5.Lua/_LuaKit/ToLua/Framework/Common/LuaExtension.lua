@@ -52,7 +52,6 @@ end
 
 --输出日志--
 function log(str)
-    if not ServerDef.DEBUG_MODEL then return end
 	if type(str) == "string" or type(str) == "number" then
 		LuaHelper.Log(str .."\n"..debug.traceback( ));
 	else
@@ -61,7 +60,6 @@ function log(str)
 end 
 
 function colorlog(str,color)
-    if not ServerDef.DEBUG_MODEL then return end 
 	str = str .. "\n" .. debug.traceback( );
 	str = string.gsub(str,"\n","</color>\n<color="..color..">")
 	LuaHelper.ColorLog(str,color);
@@ -69,13 +67,11 @@ end
 
 --错误日志--
 function logError(str)
-    if not ServerDef.DEBUG_MODEL then return end 
 	LuaHelper.LogError(str.."\n"..debug.traceback( ));
 end
 
 --警告日志--
 function logWarn(str)
-    if not ServerDef.DEBUG_MODEL then return end 
 	LuaHelper.LogWarning(str.."\n"..debug.traceback( ));
 end
 
@@ -87,12 +83,10 @@ local function dump_value_(v)
 end
 -- 暂时屏蔽掉所以dump
 function vdump(value, desciption, nesting)
-    if not ServerDef.DEBUG_MODEL then return end
 end
 
 --打印lua table--
 function dump(value, desciption, nesting)
-    if not ServerDef.DEBUG_MODEL then return end
     if type(nesting) ~= "number" then nesting = 3 end
 
     local lookupTable = {}

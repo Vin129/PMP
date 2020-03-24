@@ -503,6 +503,7 @@ GameObject:
   - component: {fileID: 1097722604}
   - component: {fileID: 1097722603}
   - component: {fileID: 1097722607}
+  - component: {fileID: 1097722608}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -584,6 +585,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 41fa3c0c0c815794b9f29114c644b449, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &1097722608
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1097722602}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71502a754d3dac14082934f3a608c6fa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  LuaPath: 
+  LuaFilePath: 
 --- !u!1 &2074743500
 GameObject:
   m_ObjectHideFlags: 0

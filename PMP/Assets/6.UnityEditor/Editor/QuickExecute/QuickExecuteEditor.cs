@@ -1,4 +1,4 @@
-﻿using System.Collections;
+﻿#define LUA_KIT //没有lua环境请注释
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
@@ -7,9 +7,12 @@ using GL = UnityEngine.GUILayout;
 using System;
 using PMP.Extension;
 using System.Linq;
-using System.Reflection;
-using System.Text.RegularExpressions;
+using System.Diagnostics;
 using System.IO;
+using System.Text.RegularExpressions;
+#if LUA_KIT
+using LuaInterface;
+#endif
 
 public class QuickExecuteEditor : EditorWindow {
 	[Flags]
@@ -19,10 +22,22 @@ public class QuickExecuteEditor : EditorWindow {
 		CSharp,
 		Lua,
 	}
-
+	#if LUA_KIT
+		QuickLuaViewer luaVeiwer;
+		public void InitLuaVeiwer()
+		{
+			if(luaVeiwer == null)
+			{
+				luaVeiwer = new QuickLuaViewer(ClearFocusFile);
+			}
+		}
+	#endif
 	[MenuItem("PMP/6.UnityEditor/QuickExecute %&Q")]
 	private static void ShowWindow() {
 		var window = GetWindow<QuickExecuteEditor>();
+		#if LUA_KIT
+			window.InitLuaVeiwer();
+		#endif
 		window.minSize = new Vector2(700,300);
 		window.titleContent = new GUIContent("QuickExecute");
 		window.Show();
@@ -54,7 +69,13 @@ public class QuickExecuteEditor : EditorWindow {
 			if(focusFileType == QEType.CSharp)
 				DrawScript(GetFocusFileType(focusFileName));
 			if(focusFileType == QEType.Lua)
-				DrawLuaScript(focusFilePath);
+			{
+				#if LUA_KIT
+				 	luaVeiwer.DrawLuaScript(focusFilePath);
+				#else
+					EGL.HelpBox("没有LUA_KIT环境，请查看说明",MessageType.Warning);
+				#endif
+			}
 			if(GL.Button("ClearFocus"))
 			{
 				ClearFocusFile();
@@ -114,11 +135,19 @@ public class QuickExecuteEditor : EditorWindow {
 		}
 	}
 
-	private void ClearFocusFile()
+	private void ClearFocusFile(string errorMsg = null)
 	{
+		if(!errorMsg.IsNullOrEmpty())
+		{
+			Log.W(errorMsg);
+			ShowNotification(new GUIContent(errorMsg));
+		}
 		focusFileName = string.Empty;
 		focusFilePath = string.Empty;
 		focusFileType = QEType.None;
+		#if LUA_KIT
+			luaVeiwer.ClearLuaState();
+		#endif	
 	}	
 
 	private Type GetFocusFileType(string name)
@@ -185,9 +214,11 @@ public class QuickExecuteEditor : EditorWindow {
 				GL.Label(methodName);
 				if(GL.Button("Execute",GUILayout.Width(100)))
 				{
-					var o = ReflectionTools.CreateObject(t);	
+					var o = ReflectionTools.CreateObject(t);
+					//TODO 扩展编辑参数	
 					if(param.Length == 0)
 						m.Invoke(o,null);
+					Log.I(string.Format("<color=#FFA80B>Execute {0}</color>",methodName));
 				}
 				GL.EndHorizontal();
 				GL.Space(2);
@@ -195,9 +226,11 @@ public class QuickExecuteEditor : EditorWindow {
 		}
 		GL.EndVertical();
 	}
-
-	private void DrawLuaScript(string path)
-	{
-
+	
+	private void OnProjectChange() {
+		ClearFocusFile();
+	}
+	private void OnDestroy() {
+		ClearFocusFile();
 	}
 } 

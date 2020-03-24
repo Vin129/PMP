@@ -2,6 +2,7 @@ FRAMEWORK_INITED = false
 
 if not FRAMEWORK_INITED then
 	require ("Framework/Function")
+	-- require("Framework/Common/LuaExtension")
 	require ("Framework/Define")
 	require ("Framework/Utility")
 	require ("Framework/MsgDispatcher")
@@ -17,6 +18,13 @@ if not FRAMEWORK_INITED then
 		luaTable = require(luaFilePath).new()
 		return luaTable
 	end
+
+	-- function ReadLuaFile(luaFilePath)
+	-- 	log("ReadLuaFile:"..luaFilePath)
+	-- 	local luaTable = nil
+	-- 	luaTable = dofile(luaFilePath).new()
+	-- 	return luaTable
+	-- end
 
 	FRAMEWORK_INITED = true
 

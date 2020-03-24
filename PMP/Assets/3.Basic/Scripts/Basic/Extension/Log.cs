@@ -6,18 +6,18 @@ using System;
 namespace PMP.Extension{
 	public static class Log {
 		#region Base
-		public static void I(string message, params object[] args)
+		public static void I(object message, params object[] args)
 		{
-			UnityEngine.Debug.LogFormat(message,args);
+			UnityEngine.Debug.LogFormat(message.ToString(),args);
 		}
-		public static void W(string message, params object[] args)
+		public static void W(object message, params object[] args)
 		{
-			UnityEngine.Debug.LogWarningFormat(message,args);
+			UnityEngine.Debug.LogWarningFormat(message.ToString(),args);
 		}
 
-		public static void E(string message, params object[] args)
+		public static void E(object message, params object[] args)
 		{
-			UnityEngine.Debug.LogErrorFormat(message,args);
+			UnityEngine.Debug.LogErrorFormat(message.ToString(),args);
 		}
 		# endregion
 
