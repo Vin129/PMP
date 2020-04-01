@@ -176,41 +176,57 @@ public class Skill13Data
 #endregion
 
 #region SKILL 14
+	[QuickExecute(true)]
 	public class SKill14Class
 	{
+		[ExecuteMethod]
 		public void DoThread(){
 #if NET_35
-			ThreadStart ts =  SubThread;
-			Thread subT = new Thread(ts);
-			subT.Start();
-			while(subT.IsAlive)
-			{
-				UnityEngine.Debug.Log("A");
-			}
+			ThreadPool.QueueUserWorkItem(ThreadPoolMethod);
+			// ThreadStart ts =  SubThread;
+			// Thread subT = new Thread(ts);
+			// subT.Start();
+			// while(subT.IsAlive)
+			// {
+			// 	UnityEngine.Debug.Log("A");
+			// }
 			for(int i = 0;i<10000;i++)
 			{
 				UnityEngine.Debug.Log("-");
 			}
+			
 			// subT.Join();
 #elif NET_40
-			Task t = new Task(()=>{
-				for(int i = 0;i<10000;i++)
-				{
-					UnityEngine.Debug.Log("-");
-				}
-			});
-			Task task = Task.Run(()=>{
-				for(int i = 0;i<10000;i++)
-				{
-					UnityEngine.Debug.Log("+");
-				}
-			});
-			t.Start();
-			task.Wait();
-
+			// Task t = new Task(()=>{
+			// 	for(int i = 0;i<10000;i++)
+			// 	{
+			// 		UnityEngine.Debug.Log("-");
+			// 	}
+			// });
+			// Task<string> task = Task.Run(()=>{
+			// 	for(int i = 0;i<10000;i++)
+			// 	{
+			// 		UnityEngine.Debug.Log("+");
+			// 	}
+			// 	return "over";
+			// });
+			// t.Start();
+			// task.Wait();
+			// Task task = Task
+			// .Run(()=>{Console.WriteLine("Hellow");})
+			// .ContinueWith((t)=>{Console.WriteLine("Wrold");});
+			CancellationTokenSource tokenSource = new CancellationTokenSource();
+			Task task = Task.Run(()=>{},tokenSource.Token);
+			tokenSource.Cancel();
 #endif
 		}
-		
+		public void ThreadPoolMethod(object state)
+		{
+			for(int i = 0;i<10000;i++)
+			{
+				UnityEngine.Debug.Log("+");
+			}
+		}
 		public void SubThread(){
 			for(int i = 0;i<10000;i++)
 			{
