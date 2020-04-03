@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
+using PMP.Extension;
 
 public class AssetBundleBuilder : EditorWindow 
 {
@@ -41,7 +42,8 @@ public class AssetBundleBuilder : EditorWindow
 			Directory.CreateDirectory(abDir);
 		}
 		BuildPipeline.BuildAssetBundles(abDir,BuildAssetBundleOptions.ChunkBasedCompression,BuildTarget.StandaloneWindows64);
-		AssetDatabase.Refresh();		
+		AssetDatabase.Refresh();	
+		Log.I("Build Over");
 	}
 
 	public static string GetSelectedPathOrFallback()
