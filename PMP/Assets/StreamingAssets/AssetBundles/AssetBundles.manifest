@@ -1,0 +1,13 @@
+ManifestFileVersion: 0
+CRC: 4069752085
+AssetBundleManifest:
+  AssetBundleInfos:
+    Info_0:
+      Name: cube1_prefab
+      Dependencies: {}
+    Info_1:
+      Name: cube2_prefab
+      Dependencies: {}
+    Info_2:
+      Name: timg_jpg
+      Dependencies: {}

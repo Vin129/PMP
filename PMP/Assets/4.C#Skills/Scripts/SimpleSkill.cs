@@ -9,6 +9,7 @@ using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.ComponentModel;
 using System.Threading;
+using PMP.Extension;
 #if NET_40
 using System.Threading.Tasks;
 #endif
@@ -132,6 +133,106 @@ public class SimpleSkill{
 			// eClass.TempAction = (int a) =>{};
 		}
 	}
+#endregion
+
+#region  SKILL 10
+[QuickExecute(true)]
+public class YieldTestClass
+{
+	public class LikeIEnumerable
+	{
+		public IEnumerator GetEnumerator()
+		{
+			yield return 1;
+			yield return 2;
+			yield return 3;
+		}
+	}
+
+    public class YieldClass : IEnumerator<object>, IEnumerator,IEnumerable<object>,IEnumerable,IDisposable
+    {
+        public object Current
+        {
+            get
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        public void Dispose()
+        {
+            throw new NotImplementedException();
+        }
+
+        public IEnumerator GetEnumerator()
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool MoveNext()
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Reset()
+        {
+            throw new NotImplementedException();
+        }
+
+        IEnumerator<object> IEnumerable<object>.GetEnumerator()
+        {
+            throw new NotImplementedException();
+        }
+    }
+    public class LikeYield
+	{
+		int state = 0;
+		private object mCurrent;
+		public object Current
+		{
+			get
+			{
+				return mCurrent;
+			}
+		}
+		public bool MoveNext()
+		{
+			switch (state)
+			{
+				case 0:
+				state++;
+				mCurrent = 1;
+				return true;
+				case 1:
+				state++;
+				mCurrent = 2;
+				return true;
+				case 2:
+				state++;
+				mCurrent = 3;
+				return true;
+				default:
+				return false;
+			}
+		}
+	}
+	[ExecuteMethod]
+	public void Test()
+	{
+		// LikeIEnumerable likeEnumerable = new LikeIEnumerable();
+		// foreach (var item in likeEnumerable)
+		// {
+		// 	Log.I(item);
+		// }
+		LikeYield likeYield = new LikeYield();
+		while(likeYield.MoveNext())
+		{
+			var item = likeYield.Current;
+			Log.I(item);
+		}
+	}
+}
+
 #endregion
 
 #region  SKILL 13
