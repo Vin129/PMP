@@ -174,7 +174,7 @@ public class QuickExecuteEditor : EditorWindow {
 	private Vector2 scrollRect;
 	private void DrawSearchResult()
 	{
-		if(searchTypeList.Count < 1)
+		if(searchTypeList == null || searchTypeList.Count < 1)
 			return;
 		scrollRect = GL.BeginScrollView(scrollRect,"box");
 		searchTypeList.ForEach((t)=>{
