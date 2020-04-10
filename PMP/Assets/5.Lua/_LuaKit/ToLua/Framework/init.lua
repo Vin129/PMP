@@ -10,6 +10,15 @@ if not FRAMEWORK_INITED then
 	-- require ("Framework/Logic/Command/ICommand") -- 暂时先不处理消息
 	require ("Framework/LuaBehaviour")
 
+	require ("Framework/LuaDebug")
+
+	function Main() 
+
+	end
+
+	function OnLevelWasLoaded(level)
+		
+	end
 
 	--创建lua文件
 	function CreateLuaFile(luaFilePath,gameObject)

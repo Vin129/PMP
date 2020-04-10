@@ -158,6 +158,47 @@ public class LeetCodeSolution
 
 	#endregion
 
+	#region 137. 只出现一次的数字 II
+	///<summary>
+	///137
+	///给定一个非空整数数组，除了某个元素只出现一次以外，其余每个元素均出现了三次。找出那个只出现了一次的元素。
+	///你的算法应该具有线性时间复杂度。 你可以不使用额外空间来实现吗？
+	///</summary>
+	public int SingleNumber1(int[] nums) {
+		//普通算法
+		//时间复杂度：O(n^2) 空间复杂度：O(1)
+		for(int i = 0;i<nums.Length;i++)
+		{
+			bool isGet = true;
+			for(int n = 0;n<nums.Length;n++)
+			{
+				if(i != n && nums[i] == nums[n])
+					isGet = false;
+			}
+			if(isGet)
+				return nums[i];
+		}
+		return 0;
+    }
+
+	public int SingleNumber2(int[] nums) {
+		//位运算算法
+		//时间复杂度：O(n) 空间复杂度：O(1)
+		int one = 0;
+		int two = 0;
+		int three = 0;
+		foreach (var n in nums)
+		{
+			two |= one&n; //二进制某位出现1次时twos = 0，出现2, 3次时twos = 1
+			one ^= n; //二进制某位出现2次时ones = 0，出现1, 3次时ones = 1
+			three = two & one; //二进制某位出现3次时（即twos = ones = 1时）three = 1，其余即出现1, 2次时three = 0；
+			one &= ~three; // 将二进制下出现3次的位置零，实现`三进制下不考虑进位的加法`；
+			two &= ~three;
+		}
+		return one;
+    }
+	#endregion
+
 }
 
 
