@@ -38,7 +38,25 @@
 
 
 
+## Graphic
 
+> **BaseClass: UIBehaviour**
+>
+> **Interface: ICanvasElement**
+>
+> **Intro: 图形组件的基类**
+
+- **ICanvasElement**: Canvas元素，当Canvas发生更新时重建（void Rebuild）
+
+### 脏标
+
+Graphic 中存在三种脏标分别代表三种等待重建
+
+1. 尺寸改变时（RectTransformDimensions）：LayoutRebuild 布局重建
+2. 尺寸、颜色改变时：Vertices to GraphicRebuild  图像重建
+3. 材质改变时：Material to GraphicRebuild  图像重建
+
+层级改变、应用动画属性（DidApplyAnimationProperties） ：All to Rebuild 重建所有
 
 
 
@@ -48,5 +66,7 @@
 
 
 ## 资料链接
+
+[processon](https://www.processon.com/diagraming/5e8953e5e4b0bf3ebcf8be7d)
 
 [源码地址](https://bitbucket.org/Unity-Technologies/ui/src/2017.4/)
