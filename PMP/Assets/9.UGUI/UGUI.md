@@ -38,6 +38,54 @@
 
 
 
+***
+
+### CanvasUpdate System
+
+> **Related Class:  Canvas、CanvasUpdateRegistry、ClipperRegistry**
+>
+> **Related  Interface: ICanvasElement**
+>
+> **Related Other: Enum CanvasUpdate**
+>
+> **Intro: 由Canvas控制，通过 ICanvasElement 接口，使用脏标记方法来统一更新CanvasElement**
+
+**ICanvasElement**
+
+- 重建方法：void Rebuild(CanvasUpdate executing);
+- 布局重建完成：void LayoutComplete();
+- 图像重建完成：void GraphicUpdateComplete();
+- 检查Element是否无效：bool IsDestroyed();
+
+**Registry 管理着两个队列**
+
+1. LayoutRebuildQueue：布局重建
+2. GraphicRebuildQueue：图像重建
+
+CanvasUpdateRegistry 被初始化时向Canvas中注册了更新函数（PerformUpdate），触发重建。
+
+```C#
+Canvas.willRenderCanvases += PerformUpdate;
+```
+
+**PerformUpdate**
+
+- 首先更新布局，根据父节点多少排序，由内向外更新。更新类型依次为 Prelayout 、Layout 、PostLayout（enum CanvasUpdate）
+- 通知布局完成
+- ClipperRegistry 进行剪裁（待之后补充）
+- 更新图像，依次 PreRender、LatePreRender、MaxUpdateValue
+- 通知图像更新完成
+
+
+
+
+
+***
+
+
+
+
+
 ## Graphic
 
 > **BaseClass: UIBehaviour**
