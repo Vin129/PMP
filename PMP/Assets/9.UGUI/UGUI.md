@@ -30,11 +30,36 @@
 
 ### EventSystem
 
-> **BaseClass: UIBehaviour**
+> **Related Class: BaseInputModule、BaseEventData、 RaycasterManager+**
 >
-> **Interface: 无**
+> **Related  Interface: 无**
 >
-> **Intro: UGUI组件们的事件系统，是UGUI的感应神经。我们的操作会通过这个系统传递并响应在正确的组件上，从而让组件真正的被使用起来。**
+> **Related Other: 无**
+>
+> **Intro: UGUI事件管理系统，通过此系统完成我们所知的UI交互。**
+
+
+
+
+
+
+
+***
+
+### Raycasters
+
+> **Related Class:  BaseRaycaster+**
+>
+> **Related  Interface: 无**
+>
+> **Related Other: 无**
+>
+> **Intro: 事件系统的一部分，管理射线**
+
+**RaycasterManager管理了一个 射线List**
+
+- 射线启用时（Enable）加入List
+- 射线弃用时（Disable）移除List
 
 
 
