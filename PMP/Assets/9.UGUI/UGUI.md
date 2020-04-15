@@ -16,13 +16,9 @@
 >
 > **Intro: UGUI组件的基础类，为UGUI组件提供了三个模块通用接口。**
 
-
-
-1.MonoBehaviour 生命周期
-
-2.UnityEditor 辅助方法
-
-3.UGUI 通用方法
+- **MonoBehaviour 生命周期**
+- **UnityEditor 辅助方法**
+- **UGUI 通用方法**
 
 
 
@@ -30,7 +26,7 @@
 
 ### EventSystem
 
-> **Related Class: BaseInputModule、BaseEventData、 RaycasterManager+**
+> **Related Class: BaseInputModule、BaseEventData、 ExecuteEvents、RaycasterManager+**
 >
 > **Related  Interface: 无**
 >
@@ -38,9 +34,17 @@
 >
 > **Intro: UGUI事件管理系统，通过此系统完成我们所知的UI交互。**
 
+
+
+**基本使用：GameObject上挂有IEventSystemHandler组件并是可用状态**
+
 **EventSystem:  管理 所有的InputModule并推动Module的工作流（Process）**
 
+***
+
 #### **BaseInputModule **
+
+**被EventSystem帧调用，检查Input中各项数值 => 判断当前操作状态，更新/创建 PointerEventData并以当前操作状态进行组装 =>  Mouse : buttonData   Touch : m_PointerData**
 
 **主要分为单点触控（StandaloneInputModule）与多点触控（~~TouchInputModule~~ Touch模块已经整合进Standalone中）模块。**
 
@@ -49,13 +53,33 @@
 
 ##### **ProcessMouseEvent**
 
-- MouseState ：获取当前鼠标状态
+- MouseState ：获取当前鼠标状态即鼠标左键、右键、中键的状态（ButtonState）
+- ProcessMousePress、ProcessMove、ProcessDrag 检测各个ButtonState下的PointerEventData
+- 满足条件则执行相应的事件（ExecuteEvents）
+
+##### ProcessTouchEvents
+
+- ProcessTouchPress、ProcessMove、ProcessDrag 检测TouchId下的PointerEventData
+- 满足条件则执行相应的事件（ExecuteEvents）
+
+***
+
+#### Raycasters
+
+**在事件系统中充当捕获物体的角色，管理射线，为InputModule提供gameObject**
+
+##### **RaycasterManager**
+
+**管理了一个 射线List，通过EventSystem.RaycastAll提供给InputModule**
+
+- 射线启用时（Enable）加入List
+- 射线弃用时（Disable）移除List
+
+##### Physics2DRaycaster PhysicsRaycaster
 
 
 
-**检查Input中各项数值 => 判断当前操作状态**
-
-
+##### RaycastResult
 
 
 
@@ -63,20 +87,21 @@
 
 ***
 
-### Raycasters
+#### ExecuteEvents
 
-> **Related Class:  BaseRaycaster+**
->
-> **Related  Interface: 无**
->
-> **Related Other: 无**
->
-> **Intro: 事件系统的一部分，管理射线**
+- **ExecuteHierarchy**：逐节点寻找可执行的物体（含可用的IEventSystemHandler），触发即停止逐根搜索，**return**
 
-**RaycasterManager管理了一个 射线List**
 
-- 射线启用时（Enable）加入List
-- 射线弃用时（Disable）移除List
+
+
+
+***
+
+
+
+
+
+
 
 
 
