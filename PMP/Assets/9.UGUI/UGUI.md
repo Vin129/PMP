@@ -38,6 +38,23 @@
 >
 > **Intro: UGUI事件管理系统，通过此系统完成我们所知的UI交互。**
 
+**EventSystem:  管理 所有的InputModule并推动Module的工作流（Process）**
+
+#### **BaseInputModule **
+
+**主要分为单点触控（StandaloneInputModule）与多点触控（~~TouchInputModule~~ Touch模块已经整合进Standalone中）模块。**
+
+- **ProcessMouseEvent：处理所有鼠标事件**
+- **ProcessTouchEvents：处理所有触点事件**
+
+##### **ProcessMouseEvent**
+
+- MouseState ：获取当前鼠标状态
+
+
+
+**检查Input中各项数值 => 判断当前操作状态**
+
 
 
 
@@ -143,3 +160,9 @@ Graphic 中存在三种脏标分别代表三种等待重建
 [processon](https://www.processon.com/diagraming/5e8953e5e4b0bf3ebcf8be7d)
 
 [源码地址](https://bitbucket.org/Unity-Technologies/ui/src/2017.4/)
+
+
+
+## 用时
+
+**4h**
