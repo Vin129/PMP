@@ -38,7 +38,25 @@
 
 **基本使用：GameObject上挂有IEventSystemHandler组件并是可用状态**
 
-**EventSystem:  管理 所有的InputModule并推动Module的工作流（Process）**
+**EventSystem:  **
+
+​	**管理 所有的输入检测模块（InputModule）并帧调用Module的执行（Process）**
+
+​	**调动射线捕捉模块（Raycasters），为InputModule提供结果（具体的触点所穿透的对象信息）**
+
+​	**InputModule 管理更新EventData 判断当前的操作事件，并通知具体的EventSystemHandler 进行逻辑处理**
+
+***
+
+#### EventData
+
+**主要分三类来存储事件信息，对应具体的EventSystemHandler** 
+
+- BaseEventData：基础的事件信息
+- PointerEventData: 存储 触摸/点击/鼠标操作 事件信息
+- AxisEventData：移动相关的事件信息，注：拖动的操作属于PointerEventData
+
+
 
 ***
 
@@ -70,18 +88,28 @@
 
 ##### **RaycasterManager**
 
-**管理了一个 射线List，通过EventSystem.RaycastAll提供给InputModule**
+**管理了一个 RaycasterList，通过EventSystem.RaycastAll提供给InputModule**
 
-- 射线启用时（Enable）加入List
-- 射线弃用时（Disable）移除List
+- Raycaster启用时（Enable）加入List
+- Raycaster弃用时（Disable）移除List
 
 ##### Physics2DRaycaster PhysicsRaycaster
 
+由Manager触发射线（**Raycast**），返回射线结果（**RaycastResult**）
 
+2D与3D分别使用了Physics2D/Physics 中射线穿透获取交点信息的方法
+
+**Raycast的过程**
+
+-  `module.Raycast(eventData, raycastResults); EventSystem启动射线`
+
+- `ray = eventCamera.ScreenPointToRay(eventData.position); 通过位置信息获取射线`
+- `m_Hits = ReflectionMethodsCache.Singleton.raycast3DAll(ray, ...);通过射线获取穿透数据`
+- `var result = new RaycastResult{....};resultAppendList.Add(result);将穿透数据进行封装`
 
 ##### RaycastResult
 
-
+射线数据封装结构，包含了有关射线经过物体的具体信息
 
 
 
@@ -190,4 +218,4 @@ Graphic 中存在三种脏标分别代表三种等待重建
 
 ## 用时
 
-**5h**
+**6h**
