@@ -6,9 +6,9 @@
 
 通过现象看本质，理解掌握，使你更加得心应手。
 
-## Base
+# Base
 
-### UIBehaviour
+## UIBehaviour
 
 > **BaseClass: MonoBehaviour**
 >
@@ -24,7 +24,7 @@
 
 ***
 
-### EventSystem
+## EventSystem
 
 > **Related Class: BaseInputModule、BaseEventData、 ExecuteEvents、RaycasterManager+**
 >
@@ -48,7 +48,7 @@
 
 ***
 
-#### EventData
+### EventData
 
 **主要分三类来存储事件信息，对应具体的EventSystemHandler** 
 
@@ -60,7 +60,7 @@
 
 ***
 
-#### **BaseInputModule **
+### **BaseInputModule **
 
 **被EventSystem帧调用，检查Input中各项数值 => 判断当前操作状态，更新/创建 PointerEventData并以当前操作状态进行组装 =>  Mouse : buttonData   Touch : m_PointerData**
 
@@ -69,31 +69,31 @@
 - **ProcessMouseEvent：处理所有鼠标事件**
 - **ProcessTouchEvents：处理所有触点事件**
 
-##### **ProcessMouseEvent**
+#### **ProcessMouseEvent**
 
 - MouseState ：获取当前鼠标状态即鼠标左键、右键、中键的状态（ButtonState）
 - ProcessMousePress、ProcessMove、ProcessDrag 检测各个ButtonState下的PointerEventData
 - 满足条件则执行相应的事件（ExecuteEvents）
 
-##### ProcessTouchEvents
+#### ProcessTouchEvents
 
 - ProcessTouchPress、ProcessMove、ProcessDrag 检测TouchId下的PointerEventData
 - 满足条件则执行相应的事件（ExecuteEvents）
 
 ***
 
-#### Raycasters
+### Raycasters
 
 **在事件系统中充当捕获物体的角色，管理射线，为InputModule提供gameObject**
 
-##### **RaycasterManager**
+#### **RaycasterManager**
 
 **管理了一个 RaycasterList，通过EventSystem.RaycastAll提供给InputModule**
 
 - Raycaster启用时（Enable）加入List
 - Raycaster弃用时（Disable）移除List
 
-##### Physics2DRaycaster PhysicsRaycaster
+#### Physics2DRaycaster PhysicsRaycaster
 
 由Manager触发射线（**Raycast**），返回射线结果（**RaycastResult**）
 
@@ -107,7 +107,7 @@
 - `m_Hits = ReflectionMethodsCache.Singleton.raycast3DAll(ray, ...);通过射线获取穿透数据`
 - `var result = new RaycastResult{....};resultAppendList.Add(result);将穿透数据进行封装`
 
-##### RaycastResult
+#### RaycastResult
 
 射线数据封装结构，包含了有关射线经过物体的具体信息
 
@@ -115,9 +115,37 @@
 
 ***
 
-#### ExecuteEvents
+### EventSystemHandler
 
-- **ExecuteHierarchy**：逐节点寻找可执行的物体（含可用的IEventSystemHandler），触发即停止逐根搜索，**return**
+事件处理者，这里会提供许多事件接口。最终事件响应的具体逻辑就由我们继承这些接口来书写。
+
+主要分为三种类型
+
+- IPointerXXXHandler ： 处理鼠标点击和触屏事件
+- IDragXXXXHandler：处理拖拽事件
+- IXXXHandler：处理其他如选择、取消等事件
+
+
+
+***
+
+### ExecuteEvents
+
+事件执行器，提供了一些通用的处理方法。
+
+Execute过程：
+
+`GetEventList<T>(target, internalHandlers); 获取物体上所有包含IEventSystemHandler且可用的组件`
+
+`arg = (T)internalHandlers[i]; 找到具体T类型组件 `
+
+`functor(arg, eventData); 执行`
+
+`handler.OnXXXX(ValidateEventData<XXXXEventData>(eventData)); functor 类似这样`
+
+
+
+**ExecuteHierarchy**：逐节点寻找可执行的物体（含可用的IEventSystemHandler），触发（Execute）即停止逐根搜索，**return**
 
 
 
@@ -135,7 +163,7 @@
 
 ***
 
-### CanvasUpdate System
+## CanvasUpdate System
 
 > **Related Class:  Canvas、CanvasUpdateRegistry、ClipperRegistry**
 >
@@ -208,7 +236,7 @@ Graphic 中存在三种脏标分别代表三种等待重建
 
 
 
-## 资料链接
+# 资料链接
 
 [processon](https://www.processon.com/diagraming/5e8953e5e4b0bf3ebcf8be7d)
 
@@ -216,6 +244,6 @@ Graphic 中存在三种脏标分别代表三种等待重建
 
 
 
-## 用时
+# 用时
 
-**6h**
+**6.5h**
