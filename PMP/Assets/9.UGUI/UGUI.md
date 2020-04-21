@@ -199,6 +199,114 @@ Canvas.willRenderCanvases += PerformUpdate;
 - 更新图像，依次 PreRender、LatePreRender、MaxUpdateValue
 - 通知图像更新完成
 
+**脏标**
+
+标记延迟执行，优化重新渲染的手段。
+
+例如在Graphic 中存在三种脏标分别代表三种等待重建
+
+1. 尺寸改变时（RectTransformDimensions）：LayoutRebuild 布局重建
+2. 尺寸、颜色改变时：Vertices to GraphicRebuild  图像重建
+3. 材质改变时：Material to GraphicRebuild  图像重建
+
+层级改变、应用动画属性（DidApplyAnimationProperties） ：All to Rebuild 重建所有
+
+
+
+***
+
+
+
+## Graphic
+
+> **Related Class: Graphic、GraphicRegistry、CanvasUpdateRegistry、VertexHelper**
+>
+> **Related  Interface: ICanvasElement、IMeshModifier**
+>
+> **Related Other: **
+>
+> **Intro: 图形组件的基类，形成图像**
+
+- **ICanvasElement**: Canvas元素(重建接口)，当Canvas发生更新时重建（void Rebuild）
+- **IMeshModifier**：网格处理接口
+
+**Graphic 作为图像组件的基类，主要为具体的图形组件提供了图像生成方法。**
+
+**通过 CanvasUpdate System 而被Canvas命令重建（渲染)。**
+
+**重建主要分为两个部分：顶点重建（UpdateGeometry）与 材质重建（UpdateMaterial）**
+
+**更新完成的结果会设置进CanvasRenderer，从而被渲染形成图像。**
+
+***
+
+### GraphicRegistry
+
+管理同Canvas下的所有Graphic对象
+
+`Dictionary<Canvas, IndexedSet<Graphic>> m_Graphics`
+
+Graphic 初始化时（Enable）会寻找其最近根节点的**Canvas**组件，并以此为key存储在**GraphicRegistry**中。
+
+
+
+***
+
+### UpdateGeometry
+
+**Graphic 顶点（网格）更新与生成，发生顶点重建时会被调用。**
+
+过程：
+
+- 更新**VertexHelper**数据
+- 遍历身上的**IMeshModifier**组件（MeshEffect组件，实现网格的一些特效，例如Shadow、Outline），更新**VertexHelper**数据
+- 将最终的顶点数据设置给 **workerMesh**，并将**workerMesh**设置进**canvasRenderer**中，进行渲染。
+
+**基础的网格由 4 个顶点 2 个三角面构成**
+
+<img src="G:\Vin129P\PMP\PMP\Assets\9.UGUI\graphicMesh.png" style="zoom:67%;" />
+
+**VertexHelper** ： 临时存储有关顶点的所有信息，辅助生成网格
+
+> \- List\<Vector3> m_Positions : 顶点位置
+>
+> \- List\<Color32> m_Colors ：顶点颜色
+>
+> \- List\<Vector2> m_Uv0S ：第1个顶点UV坐标
+>
+> \- List\<Vector2> m_Uv1 ：第2个顶点UV坐标
+>
+> \- List\<Vector2> m_Uv2S ：第3个顶点UV坐标
+>
+> \- List\<Vector2> m_Uv3S ：第4个顶点UV坐标
+>
+> \- List\<Vector3> m_Normals ：法线向量
+>
+> \- List\<Vector4> m_Tangents ： 切线向量
+>
+> \- List\<int> m_Indices ： 三角面顶点索引
+
+**BaseMeshEffect**
+
+- ​	**PositionAsUV1**: 根据顶点坐标设置UV1坐标（一般为法线贴图，不加此组件时UV1坐标默认是**Vector2.zero**）
+- ​	**Shadow**：在顶点数基础上增加了一倍的顶点数，并根据偏移（effectDistance）设置新顶点的坐标，实现阴影效果。
+- ​	**Outline**：继承自Shadow，原理就是分别在四个角（根据effectDistance换算）上实现了四个Shadow，即增加了4倍的顶点数。
+
+
+
+***
+
+### UpdateMaterial
+
+**Graphic 材质更新，发生材质重建时会被调用。**
+
+过程：
+
+- 获取自身材质**material**，遍历身上的**IMaterialModifier**组件（材质处理组件，实现材质特效，例如Mask），更新**VertexHelper**数据
+- 将最终的材质数据**materialForRendering**与纹理**mainTexture**设置进**canvasRenderer**中，进行渲染。
+
+
+
 
 
 
@@ -209,25 +317,13 @@ Canvas.willRenderCanvases += PerformUpdate;
 
 
 
-## Graphic
 
-> **BaseClass: UIBehaviour**
->
-> **Interface: ICanvasElement**
->
-> **Intro: 图形组件的基类**
 
-- **ICanvasElement**: Canvas元素，当Canvas发生更新时重建（void Rebuild）
 
-### 脏标
 
-Graphic 中存在三种脏标分别代表三种等待重建
 
-1. 尺寸改变时（RectTransformDimensions）：LayoutRebuild 布局重建
-2. 尺寸、颜色改变时：Vertices to GraphicRebuild  图像重建
-3. 材质改变时：Material to GraphicRebuild  图像重建
 
-层级改变、应用动画属性（DidApplyAnimationProperties） ：All to Rebuild 重建所有
+### 
 
 
 
@@ -242,8 +338,8 @@ Graphic 中存在三种脏标分别代表三种等待重建
 
 [源码地址](https://bitbucket.org/Unity-Technologies/ui/src/2017.4/)
 
-
+[UGUI使用教程]([https://gameinstitute.qq.com/community/search?keyword=UGUI%E4%BD%BF%E7%94%A8%E6%95%99%E7%A8%8B](https://gameinstitute.qq.com/community/search?keyword=UGUI使用教程))
 
 # 用时
 
-**6.5h**
+**9.5h**
