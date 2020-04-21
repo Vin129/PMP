@@ -149,18 +149,6 @@ Execute过程：
 
 
 
-
-
-***
-
-
-
-
-
-
-
-
-
 ***
 
 ## CanvasUpdate System
@@ -215,11 +203,9 @@ Canvas.willRenderCanvases += PerformUpdate;
 
 ***
 
-
-
 ## Graphic
 
-> **Related Class: Graphic、GraphicRegistry、CanvasUpdateRegistry、VertexHelper**
+> **Related Class: Graphic、MaskableGraphic、GraphicRegistry、CanvasUpdateRegistry、VertexHelper**
 >
 > **Related  Interface: ICanvasElement、IMeshModifier**
 >
@@ -307,12 +293,58 @@ Graphic 初始化时（Enable）会寻找其最近根节点的**Canvas**组件�
 
 
 
+***
+
+### MaskableGraphic
+
+> **BaseClass: Graphic**
+>
+> **Interface: IClippable、IMaskable、IMaterialModifier**
+>
+> **Intro: 继承Graphic，在此基础上实现了剔除、遮罩功能**
+
+**这里需要先介绍一些Mask相关的组件以便更好的了解MaskableGraphic**
+
+在Graphic更新材质的流程中有提及Mask。Graphic 可以理解成由骨头和皮肤所组成，骨头即顶点信息所构建的网格（Mesh），皮肤则是依附于Mesh的材质和纹理。实际上Mesh是不可见的，对于可见物的处理（例如Mask遮罩剔除）都是针对于Material。
+
+- **IClipper（裁剪者）与 IClippable（可裁剪对象）**
+
+  **RectMask2D的工作原理**：**RectMask2D**是**IClipper**，当启动时（Enable）先向**ClipperRegistry**中注册自己，然后会调用其所有子节点下**IClippable** 组件的**RecalculateClipping**方法，将其添加进最近父节点中的**RectMask2D**中（这是为了避免各种嵌套带来的浪费）
+
+  ```C#
+  // MaskableGraphic 中更新裁剪者的方法
+  private void UpdateClipParent()
+  {
+      var newParent = (maskable && IsActive()) ? MaskUtilities.GetRectMaskForClippable(this) : null;
+  
+      // if the new parent is different OR is now inactive
+      if (m_ParentMask != null && (newParent != m_ParentMask || !newParent.IsActive()))
+      {
+          m_ParentMask.RemoveClippable(this);
+          UpdateCull(false);
+      }
+  
+      // don't re-add it if the newparent is inactive
+      if (newParent != null && newParent.IsActive())
+          newParent.AddClippable(this);
+  
+      m_ParentMask = newParent;
+  }
+  ```
+
+  当**Canvas**进行刷新的时候（**[CanvasUpdateSystem](##CanvasUpdate System)**），会调用所有启用中的**IClipper**，执行**Cull(IClipper.PerformClipping)**。
+
+  `ClipperRegistry.instance.Cull();`
+
+  TODO
+
 
 
 
 
 ***
 
+# Component
 
 
 
@@ -323,7 +355,6 @@ Graphic 初始化时（Enable）会寻找其最近根节点的**Canvas**组件�
 
 
 
-### 
 
 
 
@@ -342,4 +373,4 @@ Graphic 初始化时（Enable）会寻找其最近根节点的**Canvas**组件�
 
 # 用时
 
-**9.5h**
+**10.5h**
