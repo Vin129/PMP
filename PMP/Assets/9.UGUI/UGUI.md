@@ -250,7 +250,7 @@ Graphic 初始化时（Enable）会寻找其最近根节点的**Canvas**组件�
 
 **基础的网格由 4 个顶点 2 个三角面构成**
 
-<img src="G:\Vin129P\PMP\PMP\Assets\9.UGUI\graphicMesh.png" style="zoom:67%;" />
+<img src="G:\Vin129P\PMP\PMP\Assets\9.UGUI\Texture\graphicMesh.png" style="zoom:67%;" />
 
 **VertexHelper** ： 临时存储有关顶点的所有信息，辅助生成网格
 
