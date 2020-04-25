@@ -151,7 +151,7 @@ Execute过程：
 
 ***
 
-## CanvasUpdate System
+## CanvasUpdateSystem
 
 > **Related Class:  Canvas、CanvasUpdateRegistry、ClipperRegistry**
 >
@@ -173,7 +173,7 @@ Execute过程：
 1. LayoutRebuildQueue：布局重建
 2. GraphicRebuildQueue：图像重建
 
-CanvasUpdateRegistry 被初始化时向Canvas中注册了更新函数（PerformUpdate），触发重建。
+CanvasUpdateRegistry 被初始化时（构造函数）向Canvas中注册了更新函数（PerformUpdate），以用来响应重建。
 
 ```C#
 Canvas.willRenderCanvases += PerformUpdate;
@@ -181,9 +181,11 @@ Canvas.willRenderCanvases += PerformUpdate;
 
 **PerformUpdate**
 
+Canvas在渲染前会调用willRenderCanvases，即执行PerformUpdate ，流程如下：
+
 - 首先更新布局，根据父节点多少排序，由内向外更新。更新类型依次为 Prelayout 、Layout 、PostLayout（enum CanvasUpdate）
 - 通知布局完成
-- ClipperRegistry 进行剪裁（待之后补充）
+- ClipperRegistry 进行剪裁  ([MaskableGraphic](###MaskableGraphic))
 - 更新图像，依次 PreRender、LatePreRender、MaxUpdateValue
 - 通知图像更新完成
 
@@ -216,9 +218,9 @@ Canvas.willRenderCanvases += PerformUpdate;
 - **ICanvasElement**: Canvas元素(重建接口)，当Canvas发生更新时重建（void Rebuild）
 - **IMeshModifier**：网格处理接口
 
-**Graphic 作为图像组件的基类，主要为具体的图形组件提供了图像生成方法。**
+**Graphic 作为图像组件的基类，主要为具体的图形组件提供了图像生成与刷新方法。**
 
-**通过 CanvasUpdate System 而被Canvas命令重建（渲染)。**
+**通过 CanvasUpdateSystem 而被Canvas命令重建（渲染)。**
 
 **重建主要分为两个部分：顶点重建（UpdateGeometry）与 材质重建（UpdateMaterial）**
 
@@ -301,52 +303,94 @@ Graphic 初始化时（Enable）会寻找其最近根节点的**Canvas**组件�
 >
 > **Interface: IClippable、IMaskable、IMaterialModifier**
 >
-> **Intro: 继承Graphic，在此基础上实现了剔除、遮罩功能**
-
-**这里需要先介绍一些Mask相关的组件以便更好的了解MaskableGraphic**
-
-在Graphic更新材质的流程中有提及Mask。Graphic 可以理解成由骨头和皮肤所组成，骨头即顶点信息所构建的网格（Mesh），皮肤则是依附于Mesh的材质和纹理。实际上Mesh是不可见的，对于可见物的处理（例如Mask遮罩剔除）都是针对于Material。
-
-- **IClipper（裁剪者）与 IClippable（可裁剪对象）**
-
-  **RectMask2D的工作原理**：**RectMask2D**是**IClipper**，当启动时（Enable）先向**ClipperRegistry**中注册自己，然后会调用其所有子节点下**IClippable** 组件的**RecalculateClipping**方法，将其添加进最近父节点中的**RectMask2D**中（这是为了避免各种嵌套带来的浪费）
-
-  ```C#
-  // MaskableGraphic 中更新裁剪者的方法
-  private void UpdateClipParent()
-  {
-      var newParent = (maskable && IsActive()) ? MaskUtilities.GetRectMaskForClippable(this) : null;
-  
-      // if the new parent is different OR is now inactive
-      if (m_ParentMask != null && (newParent != m_ParentMask || !newParent.IsActive()))
-      {
-          m_ParentMask.RemoveClippable(this);
-          UpdateCull(false);
-      }
-  
-      // don't re-add it if the newparent is inactive
-      if (newParent != null && newParent.IsActive())
-          newParent.AddClippable(this);
-  
-      m_ParentMask = newParent;
-  }
-  ```
-
-  当**Canvas**进行刷新的时候（**[CanvasUpdateSystem](##CanvasUpdate System)**），会调用所有启用中的**IClipper**，执行**Cull(IClipper.PerformClipping)**。
-
-  `ClipperRegistry.instance.Cull();`
-
-  TODO
+> **Intro: 继承Graphic，是，在此基础上实现了剔除、遮罩功能**
 
 
 
+**这里需要先理解Mask相关的组件原理以便更好的了解MaskableGraphic**
 
+​	在Graphic更新材质的流程中有提及Mask。Graphic 可以理解成由骨头和皮肤所组成，骨头即顶点信息所构建的网格（Mesh），皮肤则是依附于Mesh的材质和纹理。实际上Mesh是不可见的，对于可见物的处理（例如Mask遮罩剔除）都是针对于Material。
+
+**Mask 主要分成两个部分：IClipper 矩形裁剪  与  IMaskable基于Material的遮罩**
+
+[IClipper&IClippable](##RectMask2D)
+
+[IMaskable](##Mask)
 
 ***
 
 # Component
 
+## RectMask2D
 
+> **BaseClass: UIBehaviour**
+>
+> **Interface: IClipper、ICanvasRaycastFilter**
+>
+> **Intro: 这是UGUI提供的不依赖于Graphic的裁剪组件，它的原理在于设置IClippable组件中canvasRenderer.EnableRectClipping 来实现矩形裁剪效果**
+
+**IClipper（裁剪者）与 IClippable（可裁剪对象)**
+
+**RectMask2D的工作原理**：
+
+- **RectMask2D**是**IClipper**，当启动时（Enable）先向**ClipperRegistry**中注册自己，然后会调用其所有子节点下**IClippable** 组件的**RecalculateClipping**方法，将其添加进最近父节点中的**RectMask2D**中（这是为了避免各种嵌套带来的浪费）
+
+```C#
+// MaskableGraphic 中更新裁剪者的方法
+private void UpdateClipParent()
+{
+    var newParent = (maskable && IsActive()) ? MaskUtilities.GetRectMaskForClippable(this) : null;
+
+    // if the new parent is different OR is now inactive
+    if (m_ParentMask != null && (newParent != m_ParentMask || !newParent.IsActive()))
+    {
+        m_ParentMask.RemoveClippable(this);
+        UpdateCull(false);
+    }
+
+    // don't re-add it if the newparent is inactive
+    if (newParent != null && newParent.IsActive())
+        newParent.AddClippable(this);
+
+    m_ParentMask = newParent;
+}
+```
+
+- 当**Canvas**进行刷新的时候（**[CanvasUpdateSystem](##CanvasUpdate System)**），会调用所有启用中的**IClipper**，执行**Cull 操作，遍历执行 IClipper.PerformClipping**
+
+  `ClipperRegistry.instance.Cull();`
+
+  `m_Clippers[i].PerformClipping();`
+
+- **PerformClipping :** 目的在于更新**IClippable**中用于裁剪的**Rect**
+
+  首先会借助**MaskUtilities、Clipping** 寻找的最小的裁剪框**clipRect**
+
+  接着会遍历自身下所有的**IClippable**组件（由IClippable.RecalculateClipping 添加）设置clipRect
+
+  ​	`clipTarget.SetClipRect(clipRect, validRect)  validRect:用于判断裁剪框是否可用（长宽>0）`
+
+  ​	`canvasRenderer.EnableRectClipping(clipRect) MaskableGraphic 中设置裁剪框`
+
+  最后会判断是否改变**IClippable**中cull的状态
+
+  ​	`canvasRenderer.cull = cull;`
+
+  在此流程期间**RectMask2D**会优化处理过程：
+
+  ​	1.记录上次的**clipRect**来判断裁剪矩形是否发生变化，从而省略没必要的重新裁剪。
+
+  ​		`m_LastClipRectCanvasSpace = clipRect;`
+
+  ​	2.裁剪层的子集合会因为父级的裁剪而被裁剪，因此可以传递无效的rect来避免重复的处理。
+
+  ​		        `clipTarget.Cull(maskIsCulled ? Rect.zero : clipRect,maskIsCulled ? false : validRect)`
+
+
+
+***
+
+## Mask
 
 
 
@@ -369,8 +413,8 @@ Graphic 初始化时（Enable）会寻找其最近根节点的**Canvas**组件�
 
 [源码地址](https://bitbucket.org/Unity-Technologies/ui/src/2017.4/)
 
-[UGUI使用教程]([https://gameinstitute.qq.com/community/search?keyword=UGUI%E4%BD%BF%E7%94%A8%E6%95%99%E7%A8%8B](https://gameinstitute.qq.com/community/search?keyword=UGUI使用教程))
+[UGUI使用教程](https://gameinstitute.qq.com/community/search?keyword=UGUI使用教程)
 
 # 用时
 
-**10.5h**
+**13h**
