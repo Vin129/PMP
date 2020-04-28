@@ -209,18 +209,21 @@ Canvas在渲染前会调用willRenderCanvases，即执行PerformUpdate ，流程
 
 > **Related Class: Graphic、MaskableGraphic、GraphicRegistry、CanvasUpdateRegistry、VertexHelper**
 >
-> **Related  Interface: ICanvasElement、IMeshModifier**
+> **Related  Interface: ICanvasElement、IMeshModifier、IClippable、IMaskable、IMaterialModifier**
 >
-> **Related Other: **
+> **Related Other:** 
 >
 > **Intro: 图形组件的基类，形成图像**
 
 - **ICanvasElement**: Canvas元素(重建接口)，当Canvas发生更新时重建（void Rebuild）
 - **IMeshModifier**：网格处理接口
+- **IClippable**：裁剪相关处理接口
+- **IMaskable**：遮罩处理接口
+- **IMaterialModifier**：材质处理接口
 
-**Graphic 作为图像组件的基类，主要为具体的图形组件提供了图像生成与刷新方法。**
-
-**通过 CanvasUpdateSystem 而被Canvas命令重建（渲染)。**
+**Graphic 作为图像组件的基类，主要实现了网格与图像的生成/刷新方法。**
+**在生命周期Enable阶段、Editor模式下的OnValidate中、层级/颜色/材质改变时都会进行相应的刷新（重建）。**
+**重建过程主要通过 CanvasUpdateSystem 最终被Canvas所重新渲染。**
 
 **重建主要分为两个部分：顶点重建（UpdateGeometry）与 材质重建（UpdateMaterial）**
 
@@ -249,6 +252,29 @@ Graphic 初始化时（Enable）会寻找其最近根节点的**Canvas**组件�
 - 更新**VertexHelper**数据
 - 遍历身上的**IMeshModifier**组件（MeshEffect组件，实现网格的一些特效，例如Shadow、Outline），更新**VertexHelper**数据
 - 将最终的顶点数据设置给 **workerMesh**，并将**workerMesh**设置进**canvasRenderer**中，进行渲染。
+
+```C#
+private void DoMeshGeneration()
+{
+    if (rectTransform != null && rectTransform.rect.width >= 0 && rectTransform.rect.height >= 0)
+        OnPopulateMesh(s_VertexHelper);//更新顶点信息
+    else
+        s_VertexHelper.Clear(); // clear the vertex helper so invalid graphics dont draw.
+
+    var components = ListPool<Component>.Get();
+    GetComponents(typeof(IMeshModifier), components);
+
+    for (var i = 0; i < components.Count; i++)
+        ((IMeshModifier)components[i]).ModifyMesh(s_VertexHelper);//若由网格特效，则由特效继续更新顶点信息
+
+    ListPool<Component>.Release(components);
+
+    s_VertexHelper.FillMesh(workerMesh);
+    canvasRenderer.SetMesh(workerMesh);//设置当canvasRenderer中
+}
+```
+
+
 
 **基础的网格由 4 个顶点 2 个三角面构成**
 
@@ -290,10 +316,34 @@ Graphic 初始化时（Enable）会寻找其最近根节点的**Canvas**组件�
 
 过程：
 
-- 获取自身材质**material**，遍历身上的**IMaterialModifier**组件（材质处理组件，实现材质特效，例如Mask），更新**VertexHelper**数据
+- 获取自身材质**material**，遍历身上的**IMaterialModifier**组件（材质处理组件，实现材质特效，例如Mask），更新 **materialForRendering**
 - 将最终的材质数据**materialForRendering**与纹理**mainTexture**设置进**canvasRenderer**中，进行渲染。
 
+```C#
+protected virtual void UpdateMaterial()
+{
+    if (!IsActive())
+        return;
+    canvasRenderer.materialCount = 1;
+    canvasRenderer.SetMaterial(materialForRendering, 0);
+    canvasRenderer.SetTexture(mainTexture);
+}
 
+public virtual Material materialForRendering
+{
+    get
+    {
+        var components = ListPool<Component>.Get();
+        GetComponents(typeof(IMaterialModifier), components);
+
+        var currentMat = material;
+        for (var i = 0; i < components.Count; i++)
+            currentMat = (components[i] as IMaterialModifier).GetModifiedMaterial(currentMat);//这里由IMaterialModifier组件对currentMat进行特效化处理，得到最终展示的材质
+        ListPool<Component>.Release(components);
+        return currentMat;
+    }
+}
+```
 
 ***
 
@@ -392,9 +442,65 @@ private void UpdateClipParent()
 
 ## Mask
 
+> **BaseClass: UIBehaviour**
+>
+> **Interface: IMaterialModifier、ICanvasRaycastFilter**
+>
+> **Intro: 这是UGUI提供的以纹理为模板的遮罩组件，它的原理在于以MaskableGraphic的基本材质上增加遮罩属性内容从而生成新的遮罩材质来达到遮罩的目的**
 
+**MaskableGraphic 中IMaskable实现：**
 
+- 当**Enable**时，若该物体自身含有**Mask组件**则会调用其子节点路径下所有**IMaskable组件方法**。
 
+```C#
+protected override void OnEnable()
+{
+    base.OnEnable();
+    m_ShouldRecalculateStencil = true; //控制是否从新计算遮罩深度->改变遮罩材质
+    UpdateClipParent();
+    SetMaterialDirty();
+
+    if (GetComponent<Mask>() != null)
+    {
+        // 设置Mask遮罩状态
+        MaskUtilities.NotifyStencilStateChanged(this);
+    }
+}
+
+//IMaskable 接口方法
+public virtual void RecalculateMasking()
+{
+    m_ShouldRecalculateStencil = true;
+    SetMaterialDirty();
+}
+```
+
+- 在**Grahpic材质重建**的过程中会调用其上所有**IMaterialModifier组件方法**来处理最终的渲染材质**materialForRendering**
+
+```C#
+//MaskableGraphic 中IMaterialModifier 组件方法
+public virtual Material GetModifiedMaterial(Material baseMaterial)
+{
+    var toUse = baseMaterial;//来自Graphic的基础材质
+    if (m_ShouldRecalculateStencil)
+    {
+        var rootCanvas = MaskUtilities.FindRootSortOverrideCanvas(transform);
+        m_StencilValue = maskable ? MaskUtilities.GetStencilDepth(transform, rootCanvas) : 0;
+        m_ShouldRecalculateStencil = false;
+    }
+    // 优化了遮罩处理，如果已经启用了Mask组件，则不必再次做重复的事情
+    Mask maskComponent = GetComponent<Mask>();
+    if (m_StencilValue > 0 && (maskComponent == null || !maskComponent.IsActive()))
+    {
+        //借助StencilMaterial生产一个新的遮罩材质，这里是使用list存储避免重复生成一样的材质
+        var maskMat = StencilMaterial.Add(toUse, (1 << m_StencilValue) - 1, StencilOp.Keep, CompareFunction.Equal, ColorWriteMask.All, (1 << m_StencilValue) - 1, 0);
+        StencilMaterial.Remove(m_MaskMaterial);
+        m_MaskMaterial = maskMat;
+        toUse = m_MaskMaterial;
+    }
+    return toUse;//返回新生成的遮罩材质
+}
+```
 
 
 
@@ -417,4 +523,4 @@ private void UpdateClipParent()
 
 # 用时
 
-**13h**
+**13.5h**
