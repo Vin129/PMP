@@ -229,6 +229,8 @@ Canvas在渲染前会调用willRenderCanvases，即执行PerformUpdate ，流程
 
 **更新完成的结果会设置进CanvasRenderer，从而被渲染形成图像。**
 
+![](G:\Vin129P\PMP\PMP\Assets\9.UGUI\Texture\maskableGraphic.png)
+
 ***
 
 ### GraphicRegistry
@@ -306,7 +308,7 @@ private void DoMeshGeneration()
 - ​	**Shadow**：在顶点数基础上增加了一倍的顶点数，并根据偏移（effectDistance）设置新顶点的坐标，实现阴影效果。
 - ​	**Outline**：继承自Shadow，原理就是分别在四个角（根据effectDistance换算）上实现了四个Shadow，即增加了4倍的顶点数。
 
-
+![](G:\Vin129P\PMP\PMP\Assets\9.UGUI\Texture\MeshModifier.png)
 
 ***
 
@@ -352,16 +354,18 @@ public virtual Material materialForRendering
 > **BaseClass: Graphic**
 >
 > **Interface: IClippable、IMaskable、IMaterialModifier**
->
-> **Intro: 继承Graphic，是，在此基础上实现了剔除、遮罩功能**
 
+#### 简介
 
+**MaskableGraphic**在 **Graphic**的基础上实现了**裁剪与遮罩功能**。
 
-**这里需要先理解Mask相关的组件原理以便更好的了解MaskableGraphic**
+这主要是由 **IClippable**、**IMaskable** 两个接口来实现的。
 
 ​	在Graphic更新材质的流程中有提及Mask。Graphic 可以理解成由骨头和皮肤所组成，骨头即顶点信息所构建的网格（Mesh），皮肤则是依附于Mesh的材质和纹理。实际上Mesh是不可见的，对于可见物的处理（例如Mask遮罩剔除）都是针对于Material。
 
-**Mask 主要分成两个部分：IClipper 矩形裁剪  与  IMaskable基于Material的遮罩**
+**理解清楚IClippable与IMaskable相关的组件原理便是理解MaskableGraphic的关键**
+
+**IClipper 矩形裁剪  与  IMaskable基于Material的遮罩**
 
 [IClipper&IClippable](##RectMask2D)
 
