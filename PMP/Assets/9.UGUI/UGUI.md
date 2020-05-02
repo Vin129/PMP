@@ -101,11 +101,31 @@
 
 **Raycast的过程**
 
--  `module.Raycast(eventData, raycastResults); EventSystem启动射线`
+- `eventSystem.RaycastAll(pointerData, m_RaycastResultCache);InputModule检测到了点击\触摸，并向EventSystem请求数据` 
 
+-  `module.Raycast(eventData, raycastResults); EventSystem响应InputModule的请求,启动射线获取数据`
 - `ray = eventCamera.ScreenPointToRay(eventData.position); 通过位置信息获取射线`
-- `m_Hits = ReflectionMethodsCache.Singleton.raycast3DAll(ray, ...);通过射线获取穿透数据`
-- `var result = new RaycastResult{....};resultAppendList.Add(result);将穿透数据进行封装`
+- `m_Hits = ReflectionMethodsCache.Singleton.raycast3DAll(ray, ...);通过射线获取最近的距离数据hitDistance`
+- `Raycast(canvas, currentEventCamera, eventPosition, canvasGraphics, m_RaycastResults);遍历所有Graphic,获取可接收射线广播的Graphic信息`
+- `var result = new RaycastResult{....};resultAppendList.Add(result);将所有数据进行封装提供给EventSystem`
+
+```C#
+var castResult = new RaycastResult
+{
+    gameObject = go,//接收射线广播的物体
+    module = this,//射线采集器Raycaster
+    distance = distance,//最近距离
+    screenPosition = eventPosition,//事件坐标(鼠标\触点坐标)
+    index = resultAppendList.Count,//索引
+    depth = m_RaycastResults[index].depth,//Graphic深度
+    sortingLayer = canvas.sortingLayerID,
+    sortingOrder = canvas.sortingOrder
+};
+```
+
+
+
+
 
 #### RaycastResult
 
@@ -509,6 +529,197 @@ public virtual Material GetModifiedMaterial(Material baseMaterial)
 
 
 
+
+***
+
+## RawImage
+
+> **BaseClass: MaskableGraphic**
+>
+> **Interface: None**
+>
+> **Intro: 顾名思义，Raw，未加工的图片。**
+
+**谈及RawImage，便会想到Image。两者都是继承自MaskableGraphic，但RawImage的实现相比较于Image（1200+行）简单了非常多。**
+
+**RawImage**仅仅只重写了**Graphic**中的[OnPopulateMesh](###UpdateGeometry)，提供了一个**Rect变量**来使用户可以**自定义UV的坐标**。
+
+```C#
+protected override void OnPopulateMesh(VertexHelper vh)
+{
+    Texture tex = mainTexture;
+    vh.Clear();
+    if (tex != null)
+    {
+        var r = GetPixelAdjustedRect();
+        var v = new Vector4(r.x, r.y, r.x + r.width, r.y + r.height);
+        var scaleX = tex.width * tex.texelSize.x;
+        var scaleY = tex.height * tex.texelSize.y;
+        {
+            var color32 = color;
+            //根据m_UVRect来设置UV坐标
+            vh.AddVert(new Vector3(v.x, v.y), color32, new Vector2(m_UVRect.xMin * scaleX, m_UVRect.yMin * scaleY));
+            vh.AddVert(new Vector3(v.x, v.w), color32, new Vector2(m_UVRect.xMin * scaleX, m_UVRect.yMax * scaleY));
+            vh.AddVert(new Vector3(v.z, v.w), color32, new Vector2(m_UVRect.xMax * scaleX, m_UVRect.yMax * scaleY));
+            vh.AddVert(new Vector3(v.z, v.y), color32, new Vector2(m_UVRect.xMax * scaleX, m_UVRect.yMin * scaleY));
+
+            vh.AddTriangle(0, 1, 2);
+            vh.AddTriangle(2, 3, 0);
+        }
+    }
+}
+```
+
+
+
+***
+
+## Image
+
+> **BaseClass: MaskableGraphic**
+>
+> **Interface: ISerializationCallbackReceiver, ILayoutElement, ICanvasRaycastFilter**
+>
+> **Intro: UGUI中最重要的组件， 它最核心的用途便是“显示图片”，并且提供了四种类型来丰富其显示图片的功能（ImageType:Simple,Sliced,Tiled,Filled）**
+
+- **ISerializationCallbackReceiver**：提供了序列化前和反序列化后的处理接口
+- **ILayoutElement**：布局元素，可以被布局组件(ILayoutController)布局
+- **ICanvasRaycastFilter**：判断射线是否可以有效作用与该Image
+
+**初始化：**
+
+Image在Enable与Disable时会添加或取消对图片的跟踪
+
+`TrackImage(this);` `UnTrackImage(this);`
+
+向SpriteAtlasManager中注册重建方法。这一段是专门为SpriteAtlas准备的。
+
+
+
+**Image的代码量固然多（1200+），乍看下来便心生敬畏。所以作为Graphic组件，首先别先从它的Mesh与Material处理相关分析。**
+
+### Mesh
+
+**Image 不同于RawImage的最重要的一点在于Image使用了Sprite取代Texture作为存储图像信息的类型,Sprite是Unity专门为2D游戏(通常也用于3D游戏的UI)提供的图像对象。它记录了有关图形的许多信息（texture,uv,triangles,vertices...），通过SpriteRenderer来显示图形。**
+
+```C#
+//1200+行的Image,一大半都是来自于这的实现。
+protected override void OnPopulateMesh(VertexHelper toFill)
+{
+    if (activeSprite == null)
+    {
+        base.OnPopulateMesh(toFill);
+        return;
+    }
+	//根据不同的类型进行相应的处理
+    switch (type)
+    {
+        case Type.Simple:
+            GenerateSimpleSprite(toFill, m_PreserveAspect);
+            break;
+        case Type.Sliced:
+            GenerateSlicedSprite(toFill);
+            break;
+        case Type.Tiled:
+            GenerateTiledSprite(toFill);
+            break;
+        case Type.Filled:
+            GenerateFilledSprite(toFill, m_PreserveAspect);
+            break;
+    }
+}
+```
+
+- **Type.Simple：**简单的通过顶点颜色UV生成Mesh,顶点与三角面数量保持不变
+
+- **Type.Sliced:**   当Sprite被编辑(Sprite Editor)，使其边界值(activeSprite.border)>0时可以使用该类型。
+
+  根据Sprite编辑后的信息，至多可划分9块矩形区域，处在边界区域内的图像会被拉伸，边界区域外的图像保持不变。
+
+- **Type.Tiled：**计算边界区域内的图像大小，按照此大小平铺满整个矩形。矩形区域数量取决于平铺数量。
+
+- **Type.Filled:  ** 主要通过fillAmount(填充率)来对矩形进行不同类型的填充（水平、垂直、角度）
+
+
+
+***
+
+### Material
+
+在材质纹理的处理上，仅仅是多了对带有Alpha通道的图片的渲染操作(这个取决于原图片是否采取含有透明通道的压缩方式，若不含有透明通道，则为null)
+
+```C#
+protected override void UpdateMaterial()
+{
+    base.UpdateMaterial();
+
+    // check if this sprite has an associated alpha texture (generated when splitting RGBA = RGB + A as two textures without alpha)
+
+    if (activeSprite == null)
+    {
+        canvasRenderer.SetAlphaTexture(null);
+        return;
+    }
+
+    Texture2D alphaTex = activeSprite.associatedAlphaSplitTexture;
+
+    if (alphaTex != null)
+    {
+        canvasRenderer.SetAlphaTexture(alphaTex);
+    }
+}
+```
+
+
+
+***
+
+### Raycast
+
+Image的射线相关接口，主要通过判断坐标点的像素透明度是否满足接收射线的透明度值来判断是否可以有效响应射线。
+
+**alphaHitTestMinimumThreshold：** 是可以被动态设置的值，默认值为0，通过该值控制射线响应条件。
+
+```C#
+public virtual bool IsRaycastLocationValid(Vector2 screenPoint, Camera eventCamera)
+{
+    if (alphaHitTestMinimumThreshold <= 0)
+        return true;
+    if (alphaHitTestMinimumThreshold > 1)
+        return false;
+    if (activeSprite == null)
+        return true;
+    //计算作用位置坐标
+    Vector2 local;
+    if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(rectTransform, screenPoint, eventCamera, out local))
+        return false;
+    Rect rect = GetPixelAdjustedRect();
+    // Convert to have lower left corner as reference point.
+    local.x += rectTransform.pivot.x * rect.width;
+    local.y += rectTransform.pivot.y * rect.height;
+    local = MapCoordinate(local, rect);
+    // Normalize local coordinates.
+    Rect spriteRect = activeSprite.textureRect;
+    Vector2 normalized = new Vector2(local.x / spriteRect.width, local.y / spriteRect.height);
+    // Convert to texture space.
+    float x = Mathf.Lerp(spriteRect.x, spriteRect.xMax, normalized.x) / activeSprite.texture.width;
+    float y = Mathf.Lerp(spriteRect.y, spriteRect.yMax, normalized.y) / activeSprite.texture.height;
+    try
+    {
+        //判断坐标位置的像素透明度是否满足射线接收的最小透明度
+        return activeSprite.texture.GetPixelBilinear(x, y).a >= alphaHitTestMinimumThreshold;
+    }
+    catch (UnityException e)
+    {
+        Debug.LogError("Using alphaHitTestMinimumThreshold greater than 0 on Image whose sprite texture cannot be read. " + e.Message + " Also make sure to disable sprite packing for this sprite.", this);
+        return true;
+    }
+}
+```
+
+
+
+***
 
 
 
