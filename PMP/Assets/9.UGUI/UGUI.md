@@ -721,7 +721,260 @@ public virtual bool IsRaycastLocationValid(Vector2 screenPoint, Camera eventCame
 
 ***
 
+## Text
 
+> **BaseClass: MaskableGraphic**
+>
+> **Interface: ,ILayoutElement**
+>
+> **Intro: UGUI中重要的组件之一， 根据字符串显示文本的组件**
+
+- **ILayoutElement**：布局元素，可以被布局组件(ILayoutController)布局
+
+### FontData
+
+**Text**，相比大家也再熟悉不过了。我们经常使用它来显示文字信息，并且Text组件提供了许多参数丰富显示内容与状态。这些参数主要来自于Text中的**FontData**。
+
+`[SerializeField] private FontData m_FontData = FontData.defaultFontData;`
+
+```C#
+public class FontData : ISerializationCallbackReceiver
+{
+    //当这些值发生改变时，会触发Text的重建
+    private Font m_Font; //字体
+    private int m_FontSize; //字号
+    private FontStyle m_FontStyle; //字形(加粗、倾斜)
+    private bool m_BestFit; //设置最佳尺寸(根据矩形框大小改变字号大小),和overflow互斥
+    private int m_MinSize;  // bestFit 的最小尺寸
+    private int m_MaxSize;	// bestFit 的最大尺寸
+    private TextAnchor m_Alignment; //文本对齐(控制文本居中/居右/居左...)
+    private bool m_AlignByGeometry; //更具字符产生的矩形范围来进行对齐(下文具体介绍)
+    private bool m_RichText; //富文本
+    private HorizontalWrapMode m_HorizontalOverflow; //水平溢出
+    private VerticalWrapMode m_VerticalOverflow; // 垂直溢出
+    private float m_LineSpacing; // 行间距
+	
+    //默认参数设置
+    public static FontData defaultFontData
+    {
+        get
+        {
+            var fontData = new FontData
+            {
+                m_FontSize  = 14,
+                m_LineSpacing = 1f,
+                m_FontStyle = FontStyle.Normal,
+                m_BestFit = false,
+                m_MinSize = 10,
+                m_MaxSize = 40,
+                m_Alignment = TextAnchor.UpperLeft,
+                m_HorizontalOverflow = HorizontalWrapMode.Wrap,
+                m_VerticalOverflow = VerticalWrapMode.Truncate,
+                m_RichText  = true,
+                m_AlignByGeometry = false
+            };
+            return fontData;
+        }
+    }
+
+    ......
+}
+```
+
+
+
+**AlignByGeometry:**
+
+一般的，因为在不同字体中，文字的长宽是不相等的(**如果相等的话那文字之间的间距就会不一样**)，所以文本对齐的实现是选择**字体中的长宽最大值**为参考来进行对齐的，如图所示，采取的是左对齐与上对齐，**我们可以看见字与矩形的边界还是有一定距离的。**
+
+![](G:\Vin129P\PMP\PMP\Assets\9.UGUI\Texture\t1.png)
+
+除了以上所说的常规对齐模式，Text还提供了一个布尔值变量**AlignByGeometry**来改变对齐模式。
+
+**在AlignByGeometry开启的情况下**，Text会以**当前所显示的文字中获取最大长宽**作为参考（而不是字体中的长宽），进行对齐。（**图中锁定的是“$”字符，使其贴边**）
+
+![](G:\Vin129P\PMP\PMP\Assets\9.UGUI\Texture\t2.png)
+
+**当“$”字符被删除后，会变更长宽参考，重新对齐。**
+
+![](G:\Vin129P\PMP\PMP\Assets\9.UGUI\Texture\t3.png)
+
+
+
+### Text的生命周期
+
+​	**Enable**时会将 **cachedTextGenerator**设置成无效(这会使**TextGenerator**在调用 **Populate** 时强制生成全文本)。并向**FontUpdateTracker**注册自己（当Unity需要刷新字体资源时，用来帮助刷新Text组件）。
+
+​	**Disable**时将自身移除出**FontUpdateTracker**。
+
+**TextGenerator：**Unity专门用来渲染文字的类，在UnityEngine.dll。可以说Text的代码量并不是很多的原因是由该类完成了文本显示所需的顶点、字符信息、行信息的计算。
+
+### OnPopulateMesh
+
+​	进入这里，便是**Text**最为核心的方法，网格处理。不同于**Image**不仅要处理网格还要处理材质和纹理，**Text**并不需要对材质纹理做更加具体的处理，因为Text的材质默认来自于它的字体本身或是它身上所被设置的材质。
+
+```C#
+public override Texture mainTexture
+{
+    get
+    {
+        if (font != null && font.material != null && font.material.mainTexture != null)
+            return font.material.mainTexture; //字体的材质
+
+        if (m_Material != null)
+            return m_Material.mainTexture; // 继承自Graphic,可以手动添加的材质
+
+        return base.mainTexture;
+    }
+}
+```
+
+​	**Text重载了Graphic的OnPopulateMesh方法，该方法是几何更新生成网格（Mesh）的重要方法。通过TextGenerator计算顶点数量与位置（每个字符由四个顶点构成两个三角面）。**
+
+```C#
+protected override void OnPopulateMesh(VertexHelper toFill)
+{
+    if (font == null)
+        return;
+    m_DisableFontTextureRebuiltCallback = true;
+
+    Vector2 extents = rectTransform.rect.size;
+
+    var settings = GetGenerationSettings(extents);
+    //根据字符串和FontData中的设置计算顶点数据
+    cachedTextGenerator.PopulateWithErrors(text, settings, gameObject);
+    // Apply the offset to the vertices
+    IList<UIVertex> verts = cachedTextGenerator.verts;
+    //m_FontData.fontSize/font.fontSize 字号放大缩小字体的具体实现来自这里，改变顶点位置
+    float unitsPerPixel = 1 / pixelsPerUnit; 
+    //Last 4 verts are always a new line... (\n)
+    //这里可以看出来TextGenerator会生成 (字符数+1)*4 的顶点数据
+    int vertCount = verts.Count - 4;
+
+     //计算距离矩形边框的偏移量
+    Vector2 roundingOffset = new Vector2(verts[0].position.x, verts[0].position.y) * unitsPerPixel;
+    roundingOffset = PixelAdjustPoint(roundingOffset) - roundingOffset;
+    toFill.Clear();
+    //设置顶点数据
+    if (roundingOffset != Vector2.zero)
+    {
+        for (int i = 0; i < vertCount; ++i)
+        {
+            int tempVertsIndex = i & 3;
+            m_TempVerts[tempVertsIndex] = verts[i];
+            m_TempVerts[tempVertsIndex].position *= unitsPerPixel;
+            m_TempVerts[tempVertsIndex].position.x += roundingOffset.x;
+            m_TempVerts[tempVertsIndex].position.y += roundingOffset.y;
+            if (tempVertsIndex == 3)
+                toFill.AddUIVertexQuad(m_TempVerts);
+        }
+    }
+    else
+    {
+        for (int i = 0; i < vertCount; ++i)
+        {
+            int tempVertsIndex = i & 3;
+            m_TempVerts[tempVertsIndex] = verts[i];
+            m_TempVerts[tempVertsIndex].position *= unitsPerPixel;
+            if (tempVertsIndex == 3)
+                toFill.AddUIVertexQuad(m_TempVerts);
+        }
+    }
+    m_DisableFontTextureRebuiltCallback = false;
+}
+```
+
+
+
+***
+
+## Shadow
+
+> **BaseClass: BaseMeshEffect**
+>
+> **Interface: None**
+>
+> **Intro: UGUI实现阴影效果组件**
+
+基于网格实现阴影效果，在Graphic中DoMeshGeneration方法中（UpdateGeometry流程）会遍历所有IMeshModifier组件来更新最终的网格数据（VertexHelper）。
+
+具体实现为：**根据之前顶点信息复制并进行偏移与改变颜色生成新的顶点并添加进当前网格数据中。**
+
+即：**使用Shadow组件后，顶点数三角面数增加了一倍**
+
+```C#
+public override void ModifyMesh(VertexHelper vh)
+{
+    if (!IsActive())
+        return;
+    var output = ListPool<UIVertex>.Get();
+    vh.GetUIVertexStream(output);//获取当前的顶点数据
+
+    //通过该方法计算出新的顶点数据：复制当前顶点并,根据effectDistance位置偏移，根据effectColor改变颜色。 
+    ApplyShadow(output, effectColor, 0, output.Count, effectDistance.x, effectDistance.y);
+    vh.Clear();
+    //添加进当前网格数据中
+    vh.AddUIVertexTriangleStream(output);
+    ListPool<UIVertex>.Release(output);
+}
+```
+
+
+
+## Outline
+
+> **BaseClass: Shadow**
+>
+> **Interface: None**
+>
+> **Intro: UGUI实现描边效果组件**
+
+基于网格实现描边效果，继承自Shadow，仅仅只是在顶点处理上增加了4倍的顶点量。
+
+具体实现为：**根据之前顶点信息复制并进行偏移与改变颜色生成新的顶点并添加进当前网格数据中。**
+
+即：**使用Outline组件后，顶点数三角面数增加了四倍**
+
+```C#
+public override void ModifyMesh(VertexHelper vh)
+{
+    if (!IsActive())
+        return;
+    var verts = ListPool<UIVertex>.Get();
+    vh.GetUIVertexStream(verts);
+    var neededCpacity = verts.Count * 5;
+    if (verts.Capacity < neededCpacity)
+        verts.Capacity = neededCpacity;
+    
+    //改变偏移数据生成4倍的顶点数据
+    var start = 0;
+    var end = verts.Count;
+    ApplyShadowZeroAlloc(verts, effectColor, start, verts.Count, effectDistance.x, effectDistance.y);
+
+    start = end;
+    end = verts.Count;
+    ApplyShadowZeroAlloc(verts, effectColor, start, verts.Count, effectDistance.x, -effectDistance.y);
+
+    start = end;
+    end = verts.Count;
+    ApplyShadowZeroAlloc(verts, effectColor, start, verts.Count, -effectDistance.x, effectDistance.y);
+
+    start = end;
+    end = verts.Count;
+    ApplyShadowZeroAlloc(verts, effectColor, start, verts.Count, -effectDistance.x, -effectDistance.y);
+
+    vh.Clear();
+    //添加进原始数据中
+    vh.AddUIVertexTriangleStream(verts);
+    ListPool<UIVertex>.Release(verts);
+}
+```
+
+
+
+​	
+
+***
 
 
 
