@@ -393,6 +393,226 @@ public virtual Material materialForRendering
 
 ***
 
+## Selectable
+
+> **BaseClass: UIBehaviour**
+>
+> **Interface: IMoveHandler、IPointerDownHandler、IPointerUpHandler、IPointerEnterHandler、IPointerExitHandler、ISelectHandler、IDeselectHandler**
+>
+> **Intro: UGUI事件响应组件(Button、Toggle...)的基类，UGUI重要的组成部分，是EventSystem的具体的接收方。**
+
+- **IMoveHandler**: 接收通过外设(键盘、手柄等)的方向键输入的响应接口
+- **IPointerXXXHandler**：点击\触摸输入的响应接口
+- **ISelectHandler**：当该物体被选中时的响应接口，取决于**EventSystem**的**m_CurrentSelected**
+- **IDeselectHandler**：当该物体取消选中时的响应接口，取决于**EventSystem**的**m_CurrentSelected**
+
+**Selectable**，输入事件都是基于对象而被响应的(例如：点击按钮，拖拽物体)必须有物体，而可以触发事件的物体的基本条件便是**“可选中“**，以此为基类可以满足广大的操作受众(例如手柄操作没法像鼠标那样可以直击按钮，需要通过方向键选中按钮才可以进行点击操作)。
+
+**SelectHandler Selectable的基础事件**：由输入检测（InputModule）与输入响应模块（Selectable等组件）调用用来更换EventSystem当前对象时被触发的事件类型。
+
+```C#
+//EventSystem
+//输入检测与输入响应的模块调用,变化当前选中的GameObject。
+//每次只能有一个选中物体
+public void SetSelectedGameObject(GameObject selected, BaseEventData pointer)
+{
+    if (m_SelectionGuard)
+    {
+        Debug.LogError("Attempting to select " + selected +  "while already selecting an object.");
+        return;
+    }
+
+    m_SelectionGuard = true;
+    if (selected == m_CurrentSelected)
+    {
+        m_SelectionGuard = false;
+        return;
+    }
+	//对当前选中的物体执行 deselect事件
+    ExecuteEvents.Execute(m_CurrentSelected, pointer, ExecuteEvents.deselectHandler);
+    m_CurrentSelected = selected;
+    //新选中的物体执行 select事件
+    ExecuteEvents.Execute(m_CurrentSelected, pointer, ExecuteEvents.selectHandler);
+    m_SelectionGuard = false;
+}
+```
+
+
+
+### Selectable的生命周期
+
+**Enable**:初始化过程会向一个静态 **List\<Selectable>**中添加自己，这是为**IMoveHandle**服务。当接收到方向键移动事件时，在导航(**Navigation下文会介绍到**)失败后根据输入方向和当前Selectable组件的坐标会遍历List寻找，最终找到满足条件的新目标Selectable组件。
+
+```C#
+protected override void OnEnable()
+{
+    base.OnEnable();
+    s_List.Add(this); //在静态链表中添加自己
+    var state = SelectionState.Normal;
+    if (hasSelection)
+        state = SelectionState.Highlighted;
+    m_CurrentSelectionState = state;//设置选中状态
+    //状态变化的参数变化以及过渡(例如Highlighted 颜色需要变为highlightedColor所设置的颜色)
+    InternalEvaluateAndTransitionToSelectionState(true);
+}
+```
+
+**Disable**:将自己从链表中移除，并清楚自身状态(存在过渡)。
+
+从**Selectable**的生命周期可以看出，它在通用处理两件事情：**导航(Navigation)选择目标** 与 **状态变化的过渡(Transition)**。顺着这两件事情，我们接着看。
+
+### Navigation
+
+**导航有五种类型可供选择**
+
+```C#
+public enum Mode
+{
+    None        = 0, // 无导航
+    Horizontal  = 1, // 自动地水平方向导航
+    Vertical    = 2, // 自动地垂直方向导航
+    Automatic   = 3, // 自动两个维度的导航
+    Explicit    = 4, // 自定义各个方向的导航目标
+}
+```
+
+**当无导航时 None:**不会成为别的导航目标，自身也不会导航其他物体。
+
+**当处于水平、垂直、二维导航模式下：**目标会根据距离来确定导航上下左右的导航目标（水平只有左右，垂直只有上下）。
+
+**当处于自定义模式下：**可自己选择上下左右所导航的目标。
+
+
+
+**当响应OnMove事件时，会根据导航模式寻找对应方向的目标**
+
+```C#
+public virtual void OnMove(AxisEventData eventData)
+{
+    switch (eventData.moveDir)
+    {
+        case MoveDirection.Right:
+            Navigate(eventData, FindSelectableOnRight());//寻找右侧目标
+            break;
+		....
+    }
+}
+```
+
+```C#
+public virtual Selectable FindSelectableOnRight()
+{
+    if (m_Navigation.mode == Navigation.Mode.Explicit)
+    {
+        //若导航是自定义模式，则至今返回设置的右侧目标
+        return m_Navigation.selectOnRight;
+    }
+    if ((m_Navigation.mode & Navigation.Mode.Horizontal) != 0)
+    {
+        //导航满足方向条件时，根据世界坐标遍历List<Selectable>寻找下一个可选择的对象
+        return FindSelectable(transform.rotation * Vector3.right);
+    }
+    return null;
+}
+```
+
+### Transition
+
+**状态过渡有四种类型可供选择**
+
+```c#
+public enum Transition
+{
+    None,//无
+    ColorTint,//颜色变化
+    SpriteSwap,//Sprite图像变化
+    Animation // 动画变化
+}
+```
+
+**当Selectable状态改变时，会改变其状态相关属性(颜色、图像、动画Trigger)，并执行对应过渡。**
+
+```C#
+protected virtual void DoStateTransition(SelectionState state, bool instant)
+{
+    Color tintColor;
+    Sprite transitionSprite;
+    string triggerName;
+	
+    //.... 省略中间根据类型的属性赋值
+        
+    if (gameObject.activeInHierarchy)
+    {
+        switch (m_Transition)
+        {
+            case Transition.ColorTint:
+                StartColorTween(tintColor * m_Colors.colorMultiplier, instant);
+                break;
+            case Transition.SpriteSwap:
+                DoSpriteSwap(transitionSprite);
+                break;
+            case Transition.Animation:
+                TriggerAnimation(triggerName);
+                break;
+        }
+    }
+}
+```
+
+**颜色变化：通过Graphic中的CrossFadeColor方法，这是通过TweenRunner来实现的携程动画。**
+
+```C#
+void StartColorTween(Color targetColor, bool instant)
+{
+    if (m_TargetGraphic == null)
+        return;
+    m_TargetGraphic.CrossFadeColor(targetColor, instant ? 0f : m_Colors.fadeDuration, true, true);
+}
+```
+
+**图像变化：非常简单，将新图像设置给Image**
+
+```C#
+void DoSpriteSwap(Sprite newSprite)
+{
+    if (image == null)
+        return;
+    image.overrideSprite = newSprite;
+}
+```
+
+**动画变化：执行Animator的Trigger操作**
+
+```C#
+void TriggerAnimation(string triggername)
+{
+    if (transition != Transition.Animation || animator == null || !animator.isActiveAndEnabled || !animator.hasBoundPlayables || string.IsNullOrEmpty(triggername))
+        return;
+    animator.ResetTrigger(m_AnimationTriggers.normalTrigger);
+    animator.ResetTrigger(m_AnimationTriggers.pressedTrigger);
+    animator.ResetTrigger(m_AnimationTriggers.highlightedTrigger);
+    animator.ResetTrigger(m_AnimationTriggers.disabledTrigger);
+
+    animator.SetTrigger(triggername);
+}
+```
+
+
+
+### 事件响应
+
+Selectable虽然继承了许多的事件处理接口，但是对事件的响应并没有做太多的处理，仅仅只是为它的子类们做好了通用部分的处理(**改变状态并执行对应过渡**)，具体对事件的处理交给了它的子类们。
+
+
+
+
+
+
+
+***
+
+
+
 # Component
 
 ## RectMask2D
@@ -991,4 +1211,4 @@ public override void ModifyMesh(VertexHelper vh)
 
 # 用时
 
-**17h**
+**19h**
