@@ -613,7 +613,7 @@ Selectable虽然继承了许多的事件处理接口，但是对事件的响应�
 
 
 
-# Component
+# Graphic Component
 
 ## RectMask2D
 
@@ -1192,11 +1192,28 @@ public override void ModifyMesh(VertexHelper vh)
 
 
 
-​	
-
 ***
 
+# Selectable Component
 
+## Button
+
+> **BaseClass: Selectable**
+>
+> **Interface: IPointerClickHandler,ISubmitHandler**
+>
+> **Intro: UGUI按钮点击组件**
+
+- **IPointerClickHandler**：点击事件的响应接口
+- **ISubmitHandler**：**Submit**按键点击事件的响应接口，**Submit**是可以在**Project Settings**中的**Input**输入设置。当组件被选中时（“选中”的详细介绍请看Selectable）可响应Submit事件。
+
+Button,我们再熟悉不过的组件了。它完成了最简单的交互操作：点击。
+
+
+
+
+
+***
 
 
 
