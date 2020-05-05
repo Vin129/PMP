@@ -1207,7 +1207,242 @@ public override void ModifyMesh(VertexHelper vh)
 - **IPointerClickHandler**：点击事件的响应接口
 - **ISubmitHandler**：**Submit**按键点击事件的响应接口，**Submit**是可以在**Project Settings**中的**Input**输入设置。当组件被选中时（“选中”的详细介绍请看Selectable）可响应Submit事件。
 
-Button,我们再熟悉不过的组件了。它完成了最简单的交互操作：点击。
+**Button**,我们再熟悉不过的组件了。它完成了最简单的交互操作：**点击**。其实**Button**组件的源码非常简单，仅仅是实现了**OnPointerClick**与**OnSubmit**两个事件的响应。这个估计使用过Button的人都已经非常清楚不过了。
+
+```C#
+public virtual void OnSubmit(BaseEventData eventData)
+{
+    Press();//执行注册方法的逻辑
+    if (!IsActive() || !IsInteractable())
+        return;
+    DoStateTransition(SelectionState.Pressed, false);
+    //因为Selectable中已经写了OnPointerDown、OnPointerUp时对应的状态变化了
+    //但是对于Submit并没有结束的判断事件，所以依靠协程来执行状态变化
+    StartCoroutine(OnFinishSubmit());
+}
+```
+
+```C#
+public virtual void OnPointerClick(PointerEventData eventData)
+{
+    if (eventData.button != PointerEventData.InputButton.Left)
+        return;
+    Press();//执行注册方法的逻辑
+}
+```
+
+```C#
+//OnPointerClick 与 OnSubmit 都会执行的响应操作
+private void Press()
+{
+    if (!IsActive() || !IsInteractable())
+        return;
+    UISystemProfilerApi.AddMarker("Button.onClick", this);
+    m_OnClick.Invoke(); // 执行注册的方法
+}
+```
+
+码量非常少而功能单一，所以今天的源码分析到此就结束啦....
+
+......是不是内容太少了点呢，作者我也是这么觉得的........
+
+所以本篇文章的延伸内容就来了，**友情提醒：前方有大规模代码出没**。
+
+### Execute XXXHandler
+
+对这个写法是不是很熟悉呢？作者之前的文章中也经常这么来提及（**EventSystem中的处理接口**）。那其实在之前**EventSystem**章节中已经分析了事件系统的执行的整体流程了，今天我们随着Button组件来深入地来分析具体的**Handler**是如何被**检查并触发**的。
+
+**STEP1.一切都是由EventSystem的Update开始的：**
+
+```C#
+//EventSystem
+protected virtual void Update()
+{
+    if (current != this)
+        return;
+    TickModules();//遍历并刷新所有的InputModules,更新Modules中的m_LastMousePosition、m_MousePosition           
+    //省略中间遍历检查是否需要变更当前m_CurrentInputModule的部分
+  	.....
+  	//执行当前InputModule的Process,由此开始判断事件
+    if (!changedModule && m_CurrentInputModule != null)
+        m_CurrentInputModule.Process();
+}
+```
+
+**STEP2.InputModule先会进行对外设输入的检测，来更新导航或是确定操作。紧接着会开始触摸检测，若不存在触摸，则进行鼠标事件的检测，因为触摸事件的检测是鼠标检测的简化版，所有下面我们针对鼠标检测进行分析。**
+
+```C#
+//StandaloneInputModule
+public override void Process()
+{
+    if (!eventSystem.isFocused && ShouldIgnoreEventsOnNoFocus())
+        return;
+    //向当前选中的目标执行UpdateSelectedHandler,并返回是否执行了
+    bool usedEvent = SendUpdateEventToSelectedObject();
+
+    //若用导航的情况会执行MoveHandler与SubmitHandler,当执行成功某一项时停止
+    if (eventSystem.sendNavigationEvents)
+    {
+        if (!usedEvent)
+            usedEvent |= SendMoveEventToSelectedObject();
+        if (!usedEvent)
+            SendSubmitEventToSelectedObject();
+    }
+    //以上部分是用来检测键盘输入的部分，例如使用键盘方向键选择按钮、使用ENTER键执行Submit。
+    //接着开始先进行触摸的事件检测，如果不存在触摸，则会进行鼠标的事件检测
+    if (!ProcessTouchEvents() && input.mousePresent)
+        ProcessMouseEvent();
+}
+```
+
+**STEP3.鼠标事件的检测过程，从中我们也能很清楚的了解到各个Handler的执行顺序**（方法的复杂度在不断提升）
+
+```C#
+//StandaloneInputModule
+protected void ProcessMouseEvent(int id)
+{
+    //实际上这个id也没有用，每次都是获取左中右三个按键的信息
+    //这里包含了PointerEventData数据与ButtonState数据，前者主要记录事件相关的信息，后者记录鼠标按键的当前状态
+    var mouseData = GetMousePointerEventData(id);
+    var leftButtonData = mouseData.GetButtonState(PointerEventData.InputButton.Left).eventData;
+    m_CurrentFocusedGameObject = leftButtonData.buttonData.pointerCurrentRaycast.gameObject;
+	//执行鼠标按压的过程(根据buttonState来判断并执行 PointerDown PointerUp PointerClick Drop EndDrag 事件)
+    ProcessMousePress(leftButtonData);
+    //执行鼠标移动过程(根据pointerEvent判断并执行 PointerEnter PointerExit 事件)
+    ProcessMove(leftButtonData.buttonData);
+    //执行拖拽过程(根据pointerEvent判断并执行 BeginDrag Drag PointerUp 事件)
+    ProcessDrag(leftButtonData.buttonData);
+	
+    //以下是对鼠标右键与中键的相同执行
+ ProcessMousePress(mouseData.GetButtonState(PointerEventData.InputButton.Right).eventData);
+  ProcessDrag(mouseData.GetButtonState(PointerEventData.InputButton.Right).eventData.buttonData);
+  ProcessMousePress(mouseData.GetButtonState(PointerEventData.InputButton.Middle).eventData);
+  ProcessDrag(mouseData.GetButtonState(PointerEventData.InputButton.Middle).eventData.buttonData);
+
+    //检测是否存在滚动事件，参数来自于input.mouseScrollDelta，这里使用了leftButtonData,实际上scrollDelta三个ButtonData里都是一样的，因为在GetMousePointerEventData方法中其他两个buttonData都是Copy leftData:)
+    if (!Mathf.Approximately(leftButtonData.buttonData.scrollDelta.sqrMagnitude, 0.0f))
+    {
+        var scrollHandler = ExecuteEvents.GetEventHandler<IScrollHandler>(leftButtonData.buttonData.pointerCurrentRaycast.gameObject);
+        ExecuteEvents.ExecuteHierarchy(scrollHandler, leftButtonData.buttonData, ExecuteEvents.scrollHandler);
+    }
+}
+```
+
+**STEP4.深入其中，点击事件的判断。**
+
+- **在按下的情况下：PointerDown会先被执行，其次会检查物体是否有DragHandler，如果存在则会执行InitializePotentialDrag，这个会在发生拖拽之前执行。**
+- **在抬起的情况下（完成的点击操作）：先会执行PointerUp，其次执行PointerClick，接着时Drop，最后时EndDrag。**
+
+```C#
+//StandaloneInputModule
+protected void ProcessMousePress(MouseButtonEventData data)
+{
+    var pointerEvent = data.buttonData;
+    var currentOverGo = pointerEvent.pointerCurrentRaycast.gameObject;
+    //判断当前是否是按下状态(都可以包含按下和抬起同帧情况)
+    if (data.PressedThisFrame())
+    {
+        pointerEvent.eligibleForClick = true;
+        pointerEvent.delta = Vector2.zero;
+        pointerEvent.dragging = false;
+        pointerEvent.useDragThreshold = true;
+        pointerEvent.pressPosition = pointerEvent.position;
+        pointerEvent.pointerPressRaycast = pointerEvent.pointerCurrentRaycast;
+
+        DeselectIfSelectionChanged(currentOverGo, pointerEvent);
+        
+        //搜索父级路径下是否有IPointerDownHandler组件并执行
+        var newPressed = ExecuteEvents.ExecuteHierarchy(currentOverGo, pointerEvent, ExecuteEvents.pointerDownHandler);
+
+        //如果自身及父级路径下没有IPointerDownHandler，则检查该路径下的IPointerClickHandler。
+        if (newPressed == null)
+            newPressed = ExecuteEvents.GetEventHandler<IPointerClickHandler>(currentOverGo);
+
+        float time = Time.unscaledTime;
+        //若按压物体为发生变化，更新点击信息
+        if (newPressed == pointerEvent.lastPress)
+        {
+            var diffTime = time - pointerEvent.clickTime;
+            if (diffTime < 0.3f)
+                ++pointerEvent.clickCount;
+            else
+                pointerEvent.clickCount = 1;
+            pointerEvent.clickTime = time;
+        }
+        else
+        {
+            pointerEvent.clickCount = 1;
+        }
+        pointerEvent.pointerPress = newPressed;
+        pointerEvent.rawPointerPress = currentOverGo;
+        pointerEvent.clickTime = time;
+
+        pointerEvent.pointerDrag = ExecuteEvents.GetEventHandler<IDragHandler>(currentOverGo);
+        //当存在IDragHandler时，先触发 initializePotentialDrag 事件 这个事件在BeginDrag之前
+        if (pointerEvent.pointerDrag != null)
+            ExecuteEvents.Execute(pointerEvent.pointerDrag, pointerEvent, ExecuteEvents.initializePotentialDrag);
+
+        m_InputPointerEvent = pointerEvent;
+    }
+
+    //当抬起时(都可以包含按下和抬起同帧情况)
+    if (data.ReleasedThisFrame())
+    {
+        // 最先执行PointerUp事件
+        ExecuteEvents.Execute(pointerEvent.pointerPress, pointerEvent, ExecuteEvents.pointerUpHandler);
+
+        var pointerUpHandler = ExecuteEvents.GetEventHandler<IPointerClickHandler>(currentOverGo);
+
+        if (pointerEvent.pointerPress == pointerUpHandler && pointerEvent.eligibleForClick)
+        {
+            // 其次才执行PointerClick事件
+            ExecuteEvents.Execute(pointerEvent.pointerPress, pointerEvent, ExecuteEvents.pointerClickHandler);
+        }
+        else if (pointerEvent.pointerDrag != null && pointerEvent.dragging)
+        {
+            // Drop 事件会在 EndDrag 之前执行
+            ExecuteEvents.ExecuteHierarchy(currentOverGo, pointerEvent, ExecuteEvents.dropHandler);
+        }
+
+        pointerEvent.eligibleForClick = false;
+        pointerEvent.pointerPress = null;
+        pointerEvent.rawPointerPress = null;
+
+        // 最后执行EndDrag 事件
+        if (pointerEvent.pointerDrag != null && pointerEvent.dragging)
+            ExecuteEvents.Execute(pointerEvent.pointerDrag, pointerEvent, ExecuteEvents.endDragHandler);
+
+        pointerEvent.dragging = false;
+        pointerEvent.pointerDrag = null;
+
+        if (currentOverGo != pointerEvent.pointerEnter)
+        {
+            HandlePointerExitAndEnter(pointerEvent, null);
+            HandlePointerExitAndEnter(pointerEvent, currentOverGo);
+        }
+
+        m_InputPointerEvent = pointerEvent;
+    }
+}
+```
+
+```C#
+//PointerInputModule  检查鼠标按键状态
+protected PointerEventData.FramePressState StateForMouseButton(int buttonId)
+{
+    var pressed = input.GetMouseButtonDown(buttonId); //按下
+    var released = input.GetMouseButtonUp(buttonId); //抬起
+    if (pressed && released)
+        return PointerEventData.FramePressState.PressedAndReleased;
+    if (pressed)
+        return PointerEventData.FramePressState.Pressed;
+    if (released)
+        return PointerEventData.FramePressState.Released;
+    return PointerEventData.FramePressState.NotChanged;//无变化
+}
+```
+
+**到此位置，输入事件的检测与执行流程已经分析完毕了。当我们对EventSystem深入理解之后，我们便可以更好的去使用交互组件，并根据自己的需求修改扩展它们。**
 
 
 
@@ -1228,4 +1463,4 @@ Button,我们再熟悉不过的组件了。它完成了最简单的交互操作�
 
 # 用时
 
-**19h**
+**20h**
