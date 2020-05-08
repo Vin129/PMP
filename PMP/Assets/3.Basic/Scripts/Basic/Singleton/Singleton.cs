@@ -23,7 +23,7 @@
  * THE SOFTWARE.
  ****************************************************************************/
 
-namespace QFramework
+namespace PMP.Extension
 {
 	public abstract class Singleton<T> : ISingleton where T : Singleton<T>
 	{

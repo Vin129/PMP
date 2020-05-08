@@ -24,7 +24,7 @@
  * THE SOFTWARE.
  ****************************************************************************/
 
-namespace QFramework
+namespace PMP.Extension
 {
 	using System.Reflection;
 	using UnityEngine;

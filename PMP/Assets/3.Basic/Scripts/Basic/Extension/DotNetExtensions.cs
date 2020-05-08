@@ -23,7 +23,7 @@
  * THE SOFTWARE.
  ****************************************************************************/
 
-namespace QFramework
+namespace PMP.Extension
 {
     using System;
     using System.Collections.Generic;
@@ -32,7 +32,6 @@ namespace QFramework
     using System.Text.RegularExpressions;
     using System.Reflection;
     using System.Text;
-    using PMP.Extension;
 
     public static class ClassExtention
     {
@@ -1103,16 +1102,6 @@ namespace QFramework
             emptyStr = emptyStr.Append("appended").Append("1").ToString();
             emptyStr.LogInfo();
             emptyStr.IsNullOrEmpty().LogInfo();
-        }
-
-        /// <summary>
-        /// Check Whether string is null or empty
-        /// </summary>
-        /// <param name="selfStr"></param>
-        /// <returns></returns>
-        public static bool IsNullOrEmpty(this string selfStr)
-        {
-            return string.IsNullOrEmpty(selfStr);
         }
 
         /// <summary>

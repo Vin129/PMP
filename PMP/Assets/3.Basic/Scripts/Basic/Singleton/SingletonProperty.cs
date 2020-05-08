@@ -23,7 +23,7 @@
  * THE SOFTWARE.
  ****************************************************************************/
 
-namespace QFramework
+namespace PMP.Extension
 {
 	public static class SingletonProperty<T> where T : class, ISingleton
 	{

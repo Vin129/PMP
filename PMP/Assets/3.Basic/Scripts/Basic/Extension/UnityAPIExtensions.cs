@@ -26,7 +26,7 @@
 
 using System.Collections.Generic;
 
-namespace QFramework
+namespace PMP.Extension
 {
     using System;
     using UnityEngine;
