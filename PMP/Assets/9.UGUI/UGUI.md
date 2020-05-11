@@ -1466,7 +1466,7 @@ private void Press()
 
 **主要是通过一个bool值m_IsOn进行两种状态的切换（True/False），并通过一个监听事件传递状态的变化。**
 
-### 初始化过程：
+**初始化过程：**
 
 **Enable**阶段主要时将自身注册进**ToggleGroup**中，并根据当前状态执行特效变化。
 
@@ -1487,7 +1487,7 @@ protected override void OnDisable()
 }
 ```
 
-### IsOn
+**IsOn:**
 
 toggle组件最核心的地方在于这个bool值，该值可以通过点击（OnPointerClick）、按键（OnSubmit）、以及ToggleGroup进行改变。当IsOn发生改变时:
 
@@ -1517,7 +1517,7 @@ void Set(bool value,bool sendCallback)
 }
 ```
 
-### ToggleGroup
+**ToggleGroup:**
 
 **ToggleGroup**组件用来帮助**Toggle捆绑成组**，使其完成**X选1**或者**多选**的功能。它管理了一个**List\<Toggle>**,当**Toggle**初始化时，会将自身注册进**List**中，到被销毁时会将自身移除。
 
@@ -1549,7 +1549,23 @@ public void NotifyToggleOn(Toggle toggle)
 }
 ```
 
+***
 
+## ScrollRect
+
+> **BaseClass: UIBehaviour**
+>
+> **Interface: IInitializePotentialDragHandler,IXXXDragHandler，IScrollHandler,ICanvasElement,ILayoutElement,ILayoutGroup**
+>
+> **Intro: UGUI中滑动列表组件**
+
+- **initializePotentialDrag**：提前告知可能触发拖拽的接口，这个接口只有在存在**IDragHandler**接口时才会触发，当点击或触碰时便触发了（**会发生在BeginDrag之前**）
+- **IXXXDragHandler**：三个拖拽接口，这里就简写成这样，监听整个拖拽过程（开始，拖拽，结束）。
+- **IScrollHandler:**  鼠标中间滚动事件接口
+- **ICanvasElement**： Canvas重建接口，当Canvas发生更新时执行重建操作
+- **ILayoutElement&ILayoutGroup**：布局相关接口
+
+**ScrollRect**，是UGUI中滑动列表功能时经常被使用的组件。它提供了水平和垂直两种滑动模式，配合**Scrollbar**组件经常被用于UI制作。
 
 
 
