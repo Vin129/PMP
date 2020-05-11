@@ -1549,7 +1549,71 @@ public void NotifyToggleOn(Toggle toggle)
 }
 ```
 
+
+
 ***
+
+## Scrollbar
+
+> **BaseClass: Selectable**
+>
+> **Interface: IInitializePotentialDragHandler,IBeginDragHandler，IDragHandler,ICanvasElement**
+>
+> **Intro: UGUI中滚动条组件**
+
+- **initializePotentialDrag**：提前告知可能触发拖拽的接口，这个接口只有在存在**IDragHandler**接口时才会触发，当点击或触碰时便触发了（**会发生在BeginDrag之前**）
+- **IXXXDragHandler**：三个拖拽接口，这里就简写成这样，监听整个拖拽过程（开始，拖拽，结束）。
+- **ICanvasElement**： Canvas重建接口，当Canvas发生更新时执行重建操作
+
+**Scrollbar**组件的实现原理：通过拖拽事件、点击事件、移动按键来控制滚动条在一定区域中移动，并计算位于该区域中（0~1）之间的值value。
+
+**拖拽原理类似于ScrollRect，这个我们具体在ScrollRect中进行分析。**
+
+**点击交互：**发生点击交互时，会根据点击位置启动一个携程来进行位置更新。
+
+```C#
+public override void OnPointerDown(PointerEventData eventData)
+{
+    //如果是要进行拖拽了那就没事了:)
+    if (!MayDrag(eventData))
+        return;
+    base.OnPointerDown(eventData);//执行Selectable基类方法
+    isPointerDownAndNotDragging = true; //标记状态
+    m_PointerDownRepeat = StartCoroutine(ClickRepeat(eventData)); //启动变化携程
+}
+```
+
+```C#
+protected IEnumerator ClickRepeat(PointerEventData eventData)
+{
+    //当抬起操作时则此循环结束
+    while (isPointerDownAndNotDragging)
+    {
+        if (!RectTransformUtility.RectangleContainsScreenPoint(m_HandleRect, eventData.position, eventData.enterEventCamera))
+        {
+            Vector2 localMousePos;
+            //获取鼠标点击位于HandleRect的本地坐标
+            if (RectTransformUtility.ScreenPointToLocalPointInRectangle(m_HandleRect, eventData.position, eventData.pressEventCamera, out localMousePos))
+            {
+                //根据轴变化value值,频率取决于size大小
+                var axisCoordinate = axis == 0 ? localMousePos.x : localMousePos.y;
+                if (axisCoordinate < 0)
+                    value -= size;
+                else
+                    value += size;
+            }
+        }
+        yield return new WaitForEndOfFrame();
+    }
+    StopCoroutine(m_PointerDownRepeat);
+}
+```
+
+
+
+***
+
+
 
 ## ScrollRect
 
@@ -1566,6 +1630,277 @@ public void NotifyToggleOn(Toggle toggle)
 - **ILayoutElement&ILayoutGroup**：布局相关接口
 
 **ScrollRect**，是UGUI中滑动列表功能时经常被使用的组件。它提供了水平和垂直两种滑动模式，配合**Scrollbar**组件经常被用于UI制作。
+
+**ScrollRect组件的主要原理：通过拖拽事件、滚轮事件、ScrollBar来控制一块区域的移动，达到滚动列表的效果。**
+
+**初始化**
+
+**Enable阶段**：向两个**Scrollbar**组件注册事件监听来激活滚动条的响应交互，并向重建系统（**CanvasUpdateSystem**）中的布局重建队（**m_LayoutRebuildQueue**）列添加自己。
+
+```C#
+protected override void OnEnable()
+{
+    base.OnEnable();
+    //注册scrollbar的事件监听
+    if (m_HorizontalScrollbar)
+       m_HorizontalScrollbar.onValueChanged.AddListener(SetHorizontalNormalizedPosition);
+    if (m_VerticalScrollbar)
+        m_VerticalScrollbar.onValueChanged.AddListener(SetVerticalNormalizedPosition);
+    //将自身添加进布局重建队列中
+    CanvasUpdateRegistry.RegisterCanvasElementForLayoutRebuild(this);
+}
+```
+
+**Disable阶段**：则对Enable阶段的注册进行相对应的移除工作
+
+**LateUpdate阶段**：这个阶段最为重要，在每帧的末尾根据组件所处在的状态（拖拽刚结束/正在拖拽）进行**数据更新**或着**模式补偿**处理。
+
+```C#
+protected virtual void LateUpdate()
+{
+    if (!m_Content)
+        return;
+    EnsureLayoutHasRebuilt();//确保布局刷新
+    UpdateBounds();//更新两个包围盒的数据
+    float deltaTime = Time.unscaledDeltaTime;
+    //计算内容盒对于视图盒的偏移值，是否存在超出边界的部分
+    Vector2 offset = CalculateOffset(Vector2.zero);
+    //在拖拽结束之后判断移动模式，进行位置补差操作（弹性模式/惯性作用）
+    if (!m_Dragging && (offset != Vector2.zero || m_Velocity != Vector2.zero))
+    {
+        Vector2 position = m_Content.anchoredPosition;
+        for (int axis = 0; axis < 2; axis++)
+        {
+            //在弹性模式下且存在偏移时，进行回弹操作
+            if (m_MovementType == MovementType.Elastic && offset[axis] != 0)
+            {
+                float speed = m_Velocity[axis];
+                position[axis] = Mathf.SmoothDamp(m_Content.anchoredPosition[axis], m_Content.anchoredPosition[axis] + offset[axis], ref speed, m_Elasticity, Mathf.Infinity, deltaTime);
+                if (Mathf.Abs(speed) < 1)
+                    speed = 0;
+                m_Velocity[axis] = speed;
+            }
+            //在惯性下，对内容区域进行减速运动
+            else if (m_Inertia)
+            {
+                m_Velocity[axis] *= Mathf.Pow(m_DecelerationRate, deltaTime);
+                if (Mathf.Abs(m_Velocity[axis]) < 1)
+                    m_Velocity[axis] = 0;
+                position[axis] += m_Velocity[axis] * deltaTime;
+            }
+            else
+            {
+                m_Velocity[axis] = 0;
+            }
+        }
+        //强制模式下则不需过渡直接回正偏移
+        if (m_MovementType == MovementType.Clamped)
+        {
+            offset = CalculateOffset(position - m_Content.anchoredPosition);
+            position += offset;
+        }
+        SetContentAnchoredPosition(position);
+    }
+    //当正在发生拖拽时且是惯性状态下，需要计算拖拽速度
+    if (m_Dragging && m_Inertia)
+    {
+        Vector3 newVelocity = (m_Content.anchoredPosition - m_PrevPosition) / deltaTime;
+        m_Velocity = Vector3.Lerp(m_Velocity, newVelocity, deltaTime * 10);
+    }
+    if (m_ViewBounds != m_PrevViewBounds || m_ContentBounds != m_PrevContentBounds || m_Content.anchoredPosition != m_PrevPosition)
+    {
+        //更新Scrollbar的value值
+        UpdateScrollbars(offset);
+        UISystemProfilerApi.AddMarker("ScrollRect.value", this);
+        //执行位置变化的监听事件
+        m_OnValueChanged.Invoke(normalizedPosition);
+        UpdatePrevData();
+    }
+    UpdateScrollbarVisibility();
+}
+```
+
+
+
+
+
+**注**：**ScrollRect**中，使用了**Bounds**结构来进行位置变化的判断与计算（**Bounds** 是Unity封装的用于区域计算的结构体，它是轴对称性质的空间，所以只需要中心与尺寸即可）。
+
+**viewBounds 对应视图区域的包围空间（以下会简称视图盒）**
+
+**contentBounds 对应内容区域的包围空间（简称内容盒）**
+
+***
+
+**滑动条交互**
+
+这里我们选择**HorizontalScrollbar**作为示例进行分析
+
+- 在初始化时会注册事件监听，来响应Scrollbar的value值变化
+
+  `m_HorizontalScrollbar.onValueChanged.AddListener(SetHorizontalNormalizedPosition);`
+
+- 当value发生变化时，通过该value值对应的内容盒的偏移值可以计算出内容区域的新坐标（基于ViewRect的本地坐标）。
+
+  ```C#
+  // axis 代表坐标参数 0为x轴，1为y轴
+  protected virtual void SetNormalizedPosition(float value, int axis)
+  {
+      EnsureLayoutHasRebuilt();
+      UpdateBounds();
+      // 计算scrollbar value值控制的长度大小，即 内容区域大于试图区域的大小
+      float hiddenLength = m_ContentBounds.size[axis] - m_ViewBounds.size[axis];
+      // 计算内容盒最小坐标改变多少
+      float contentBoundsMinPosition = m_ViewBounds.min[axis] - value * hiddenLength;
+      // 计算出内容区域的最新本地坐标
+      float newLocalPosition = m_Content.localPosition[axis] + contentBoundsMinPosition - m_ContentBounds.min[axis];
+  
+      Vector3 localPosition = m_Content.localPosition;
+      //判断变化大小是否合理，太小的情况将被忽略
+      if (Mathf.Abs(localPosition[axis] - newLocalPosition) > 0.01f)
+      {
+          //更新坐标位置
+          localPosition[axis] = newLocalPosition;
+          m_Content.localPosition = localPosition;
+          m_Velocity[axis] = 0;
+          UpdateBounds();
+      }
+  }
+  ```
+
+  
+
+***
+
+**拖拽交互**
+
+拖拽交互分为四个部分分布由四个接口事件依次响应。
+
+- **即将发生拖拽**：当鼠标左键或者触点接触**ScrollRect**时会触发**InitializePotentialDrag**，将速度值归零，准备进行拖拽事件。
+
+```C#
+public virtual void OnInitializePotentialDrag(PointerEventData eventData)
+{
+    if (eventData.button != PointerEventData.InputButton.Left)
+        return;
+	//速度值归零
+    m_Velocity = Vector2.zero;
+}
+```
+
+- **开始拖拽**：初始化两个参数 m_PointerStartLocalCursor 起始拖拽点坐标  m_ContentStartPosition 内容区域起始位置
+
+```C#
+public virtual void OnBeginDrag(PointerEventData eventData)
+{
+    if (eventData.button != PointerEventData.InputButton.Left)
+        return;
+    if (!IsActive())
+        return;
+    //更新两个包围盒的数据
+    UpdateBounds();
+    m_PointerStartLocalCursor = Vector2.zero;
+    //记录由屏幕坐标转换为视图区域下的起始位置坐标
+    RectTransformUtility.ScreenPointToLocalPointInRectangle(viewRect, eventData.position, eventData.pressEventCamera, out m_PointerStartLocalCursor);
+    //记录内容区域当前坐标
+    m_ContentStartPosition = m_Content.anchoredPosition;
+    //标记正在进行拖拽
+    m_Dragging = true;
+}
+```
+
+- **拖拽过程**：根据**PointerEventData**中的数据，计算拖拽导致内容区域的坐标变化
+
+```C#
+public virtual void OnDrag(PointerEventData eventData)
+{
+    if (eventData.button != PointerEventData.InputButton.Left)
+        return;
+    if (!IsActive())
+        return;
+    Vector2 localCursor;
+    //获取当前触点位于视图区域中的坐标
+    if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(viewRect, eventData.position, eventData.pressEventCamera, out localCursor))
+        return;
+    UpdateBounds();
+    //与起始坐标求插值
+    var pointerDelta = localCursor - m_PointerStartLocalCursor;
+    //计算拖拽变化后的区域位置
+    Vector2 position = m_ContentStartPosition + pointerDelta;
+
+    // 计算内容区域在视图区域下是否需要偏移量,即是否有超出边界的情况
+    Vector2 offset = CalculateOffset(position - m_Content.anchoredPosition);
+    position += offset;
+    if (m_MovementType == MovementType.Elastic)
+    {
+        //当处于弹性模式下时,会根据偏移量增加一个弹性势能让内容区域不会全部处于视图区域的外部
+        if (offset.x != 0)
+            position.x = position.x - RubberDelta(offset.x, m_ViewBounds.size.x);//这里随着offset值越大势能越强
+        if (offset.y != 0)
+            position.y = position.y - RubberDelta(offset.y, m_ViewBounds.size.y);
+    }
+    //更新内容区域坐标
+    SetContentAnchoredPosition(position);
+}
+```
+
+- **拖拽结束**：改变拖拽状态，并在**LateUpdate**中进行拖拽结束后的补偿操作（例如：**弹性模式下的回弹**，**惯性下的减速运动**）
+
+```C#
+public virtual void OnEndDrag(PointerEventData eventData)
+{
+    if (eventData.button != PointerEventData.InputButton.Left)
+        return;
+    //改变拖拽状态
+    m_Dragging = false;
+}
+```
+
+
+
+***
+
+**滚轮交互**
+
+滚轮交互特点在于无法控制垂直开关与水平开关同时存在的ScrollRect。
+
+```C#
+public virtual void OnScroll(PointerEventData data)
+{
+    if (!IsActive())
+        return;
+    EnsureLayoutHasRebuilt();
+    UpdateBounds();
+    //获取滚轮变化值
+    Vector2 delta = data.scrollDelta;
+    delta.y *= -1;
+    //滚轮交互支持水平与垂直同时存在的情况
+    if (vertical && !horizontal)
+    {
+        if (Mathf.Abs(delta.x) > Mathf.Abs(delta.y))
+            delta.y = delta.x;
+        delta.x = 0;
+    }
+    if (horizontal && !vertical)
+    {
+        if (Mathf.Abs(delta.y) > Mathf.Abs(delta.x))
+            delta.x = delta.y;
+        delta.y = 0;
+    }
+    //根据滚轮值变化计算内容区域位置变化
+    Vector2 position = m_Content.anchoredPosition;
+    position += delta * m_ScrollSensitivity;
+    //如果是强制模式下,确保不会使内容区域超出边界
+    if (m_MovementType == MovementType.Clamped)
+        position += CalculateOffset(position - m_Content.anchoredPosition);
+    SetContentAnchoredPosition(position);
+    UpdateBounds();
+}
+```
+
+***
+
+
 
 
 
@@ -1588,4 +1923,4 @@ public void NotifyToggleOn(Toggle toggle)
 
 # 用时
 
-**21h**
+**24h**
