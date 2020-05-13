@@ -1900,7 +1900,273 @@ public virtual void OnScroll(PointerEventData data)
 
 ***
 
+## Dropdown
 
+> **BaseClass: Selectable**
+>
+> **Interface:IPointerClickHandler,ISubmitHandler,ICancelHandler**
+>
+> **Intro: UGUI中下拉列表组件**
+
+- **IPointerClickHandler**：点击事件的响应接口
+- **ISubmitHandler**：**Submit**按键点击事件的响应接口，**Submit**是可以在**Project Settings**中的**Input**输入设置。当组件被选中时（“选中”的详细介绍请看Selectable）可响应Submit事件。
+- **ICancelHandler** ：**Cancel**按键点击事件的响应接口，原理同**Submit**接口，此按键代表取消操作
+
+**Dropdown**，是UGUI中下拉列表功能组件。它属于直接介绍的组件的混合体，**Dropdown**组件中运用到了**Text、Toggle、Scrollbar、ScrollRect**组件，更具具体需求可以舍弃**除Toggle**之外的组件进行自己的改造。
+
+### 初始化
+
+​	**Dropdown**的初始化过程仅有一个**Awake**，做了帮助实现动画过渡模块初始化。
+
+```C#
+protected override void Awake()
+{
+    #if UNITY_EDITOR
+        if (!Application.isPlaying)
+            return;
+    #endif
+        m_AlphaTweenRunner = new TweenRunner<FloatTween>();
+    m_AlphaTweenRunner.Init(this); // 初始化渐变模块
+    if (m_CaptionImage)
+        m_CaptionImage.enabled = (m_CaptionImage.sprite != null);
+    if (m_Template)
+        m_Template.gameObject.SetActive(false);
+}
+```
+
+
+
+### 工作原理
+
+​	本篇文章着重分析**Dropdown**组件下拉列表功能的实现。
+
+**由事件为导向的触发**：在**点击事件**与**确定事件**中都是相同的处理，执行了**Show()**方法显示下拉列表
+
+```C#
+public virtual void OnPointerClick(PointerEventData eventData)
+{
+    Show();
+}
+public virtual void OnSubmit(BaseEventData eventData)
+{
+    Show();
+}
+```
+
+**Show()方法**：显示下拉列表的方法，也是整个Dropdown组件最关键的方法，它做到了以下几点内容
+
+1. 若没有对列表模板（**Template**）进行过**初始化设置**便进行初始化：检测模板是否符合要求（**Item含有Toggle组件、父级不是RectTransform、ItemText与ItemImage如果存在必须在Item内部**），为**ToggleItem**添加**DropdownItem**组件并做相关绑定，将列表模板处于UI的最高层（`popupCanvas.sortingOrder = 30000;`）
+
+2. **复制模板与创建Item**：此过程会根据选项内容数据调整区域大小。
+
+3. **创建阻拦层**：阻拦层是用于监听用户点击事件并执行下拉列表的隐藏，它的层级仅次于列表层（29999）
+
+```c#
+public void Show()
+{
+    if (!IsActive() || !IsInteractable() || m_Dropdown != null)
+        return;
+    //初始状态时validTemplate为false来触发对于列表模板的初始化设置
+    if (!validTemplate)
+    {
+        //模板初始化方法：检测并设置模板，初始化模板绑定相关组件并调整模板UI层级，若没有通过检查则模板标记为不可用状态。
+        SetupTemplate();
+        //若检测不通过则无法正常显示下拉列表
+        if (!validTemplate)
+            return;
+    }
+
+    var list = ListPool<Canvas>.Get();
+    gameObject.GetComponentsInParent(false, list);
+    if (list.Count == 0)
+        return;
+    //获取父级路径下最近的canvas
+    Canvas rootCanvas = list[0];
+    ListPool<Canvas>.Release(list);
+    //显示模板准备复制列表
+    m_Template.gameObject.SetActive(true);
+    //复制列表模板
+    m_Dropdown = CreateDropdownList(m_Template.gameObject);
+    //进行改名
+    m_Dropdown.name = "Dropdown List";
+    m_Dropdown.SetActive(true);
+
+    // 设置新的列表模板的父级
+    RectTransform dropdownRectTransform = m_Dropdown.transform as RectTransform;
+    dropdownRectTransform.SetParent(m_Template.transform.parent, false);
+    // 创建列表Item
+    DropdownItem itemTemplate = m_Dropdown.GetComponentInChildren<DropdownItem>();
+
+    GameObject content = itemTemplate.rectTransform.parent.gameObject;
+    RectTransform contentRectTransform = content.transform as RectTransform;
+    itemTemplate.rectTransform.gameObject.SetActive(true);
+
+    Rect dropdownContentRect = contentRectTransform.rect;
+    Rect itemTemplateRect = itemTemplate.rectTransform.rect;
+
+    //计算Item与背景边界的偏移量
+    Vector2 offsetMin = itemTemplateRect.min - dropdownContentRect.min + (Vector2)itemTemplate.rectTransform.localPosition;
+    Vector2 offsetMax = itemTemplateRect.max - dropdownContentRect.max + (Vector2)itemTemplate.rectTransform.localPosition;
+    Vector2 itemSize = itemTemplateRect.size;
+
+    //清空DropdownItem List 准备开始选项Itme的创建
+    m_Items.Clear();
+
+    Toggle prev = null;
+    for (int i = 0; i < options.Count; ++i)
+    {
+        OptionData data = options[i];
+        //创建Item
+        DropdownItem item = AddItem(data, value == i, itemTemplate, m_Items);
+        if (item == null)
+            continue;
+        // 设置toggle初始状态以及注册事件监听
+        item.toggle.isOn = value == i;
+        item.toggle.onValueChanged.AddListener(x => OnSelectItem(item.toggle));
+        //标记当前选项
+        if (item.toggle.isOn)
+            item.toggle.Select();
+        // 设置Item的导航
+        if (prev != null)
+        {
+            Navigation prevNav = prev.navigation;
+            Navigation toggleNav = item.toggle.navigation;
+            prevNav.mode = Navigation.Mode.Explicit;
+            toggleNav.mode = Navigation.Mode.Explicit;
+
+            prevNav.selectOnDown = item.toggle;
+            prevNav.selectOnRight = item.toggle;
+            toggleNav.selectOnLeft = prev;
+            toggleNav.selectOnUp = prev;
+
+            prev.navigation = prevNav;
+            item.toggle.navigation = toggleNav;
+        }
+        prev = item.toggle;
+    }
+    // 计算内容区域的高度
+    Vector2 sizeDelta = contentRectTransform.sizeDelta;
+    sizeDelta.y = itemSize.y * m_Items.Count + offsetMin.y - offsetMax.y;
+    contentRectTransform.sizeDelta = sizeDelta;
+
+    //计算是否有额外空区域（当内容区域小于列表本身的区域时调整列表大小）
+    float extraSpace = dropdownRectTransform.rect.height - contentRectTransform.rect.height;
+    if (extraSpace > 0)
+        dropdownRectTransform.sizeDelta = new Vector2(dropdownRectTransform.sizeDelta.x, dropdownRectTransform.sizeDelta.y - extraSpace);
+
+    // 当列表处于canvas外部时，将其按坐标轴进行翻转
+    Vector3[] corners = new Vector3[4];
+    dropdownRectTransform.GetWorldCorners(corners);
+
+    RectTransform rootCanvasRectTransform = rootCanvas.transform as RectTransform;
+    Rect rootCanvasRect = rootCanvasRectTransform.rect;
+    for (int axis = 0; axis < 2; axis++)
+    {
+        bool outside = false;
+        for (int i = 0; i < 4; i++)
+        {
+            Vector3 corner = rootCanvasRectTransform.InverseTransformPoint(corners[i]);
+            if (corner[axis] < rootCanvasRect.min[axis] || corner[axis] > rootCanvasRect.max[axis])
+            {
+                outside = true;
+                break;
+            }
+        }
+        if (outside)
+            RectTransformUtility.FlipLayoutOnAxis(dropdownRectTransform, axis, false, false);
+    }
+
+    for (int i = 0; i < m_Items.Count; i++)
+    {
+        RectTransform itemRect = m_Items[i].rectTransform;
+        itemRect.anchorMin = new Vector2(itemRect.anchorMin.x, 0);
+        itemRect.anchorMax = new Vector2(itemRect.anchorMax.x, 0);
+        itemRect.anchoredPosition = new Vector2(itemRect.anchoredPosition.x, offsetMin.y + itemSize.y * (m_Items.Count - 1 - i) + itemSize.y * itemRect.pivot.y);
+        itemRect.sizeDelta = new Vector2(itemRect.sizeDelta.x, itemSize.y);
+    }
+
+    // 下拉列表渐出效果
+    AlphaFadeList(0.15f, 0f, 1f);
+    // 隐藏模板
+    m_Template.gameObject.SetActive(false);
+    itemTemplate.gameObject.SetActive(false);
+    // 创建拦截模板,用于监听点击事件来隐藏下拉列表,层级会低于下拉列表(2999)
+    m_Blocker = CreateBlocker(rootCanvas);
+}
+```
+
+当下拉列表中的Item被选择时（即Toggle监听事件触发时）会执行选择操作，**更新选项值并隐藏列表**
+
+```C#
+private void OnSelectItem(Toggle toggle)
+{
+    if (!toggle.isOn)
+        toggle.isOn = true;
+    int selectedIndex = -1;
+    Transform tr = toggle.transform;
+    Transform parent = tr.parent;
+    for (int i = 0; i < parent.childCount; i++)
+    {
+        if (parent.GetChild(i) == tr)
+        {
+            selectedIndex = i - 1;
+            break;
+        }
+    }
+
+    if (selectedIndex < 0)
+        return;
+	//更新 当前选项值
+    value = selectedIndex;
+    // 隐藏下拉列表
+    Hide();
+}
+```
+
+**value**值发生变化时，会执行**RefreshShownValue()**刷新显示。
+
+```C#
+//更新当前选项的信息至captionText、captionImage
+public void RefreshShownValue()
+{
+    OptionData data = s_NoOptionData;
+    if (options.Count > 0)
+        data = options[Mathf.Clamp(m_Value, 0, options.Count - 1)];
+    if (m_CaptionText)
+    {
+        if (data != null && data.text != null)
+            m_CaptionText.text = data.text;
+        else
+            m_CaptionText.text = "";
+    }
+    if (m_CaptionImage)
+    {
+        if (data != null)
+            m_CaptionImage.sprite = data.image;
+        else
+            m_CaptionImage.sprite = null;
+        m_CaptionImage.enabled = (m_CaptionImage.sprite != null);
+    }
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+***
 
 
 
