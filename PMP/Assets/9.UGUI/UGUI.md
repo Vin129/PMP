@@ -1914,7 +1914,7 @@ public virtual void OnScroll(PointerEventData data)
 
 **Dropdown**，是UGUI中下拉列表功能组件。它属于直接介绍的组件的混合体，**Dropdown**组件中运用到了**Text、Toggle、Scrollbar、ScrollRect**组件，更具具体需求可以舍弃**除Toggle**之外的组件进行自己的改造。
 
-### 初始化
+**初始化**
 
 ​	**Dropdown**的初始化过程仅有一个**Awake**，做了帮助实现动画过渡模块初始化。
 
@@ -1936,7 +1936,7 @@ protected override void Awake()
 
 
 
-### 工作原理
+**工作原理**
 
 ​	本篇文章着重分析**Dropdown**组件下拉列表功能的实现。
 
@@ -2151,6 +2151,315 @@ public void RefreshShownValue()
 ```
 
 
+
+***
+
+## InputField
+
+> **BaseClass: Selectable**
+>
+> **Interface: IUpdateSelectedHandler,IXXXDragHandler，IPointerClickHandler,ISubmitHandler,ICanvasElement,ILayoutElement**
+>
+> **Intro: UGUI中输入框组件组件**
+
+- **IUpdateSelectedHandler**：刷新当前被选中物体事件监听，帧刷新
+- **IXXXDragHandler**：三个拖拽接口，这里就简写成这样，监听整个拖拽过程（开始，拖拽，结束）。
+- **IPointerClickHandler:**  点击事件接口
+- **ISubmitHandler**： **Submit**按键点击事件的响应接口，**Submit**是可以在**Project Settings**中的**Input**输入设置。当组件被选中时（“选中”的详细介绍请看Selectable）可响应Submit事件。
+- **ICanvasElement** ：Canvas元素(重建接口)，当Canvas发生更新时重建（void Rebuild）
+- **ILayoutElement**：布局相关接口
+
+**InputField**，是UGUI中输入文本框组件。它提供了**丰富的输入文本属性**来实现输入功能。
+
+为了满足各种要求的输入，**InputField**的代码量非常的大（**2400+行**）是目前UGUI组件中**内容量最大**的组件，逻辑并不复杂，只在于它实现的输入类型种类繁多所以初看源码会有一种**懵**的感觉。所以本章的分析思路主要围绕其主要的输入功能的实现过程，并针对一种输入类型进行分析，理清思路。
+
+### **初始化**
+
+一如既往，阅读源码的最好方式就是先从生命周期开始。
+
+**Enable阶段**：主要是向Text组件注册了重建前（脏标记）时的事件监听。并执行了**UpdateLabel**方法，相应的事件中也包含了**UpdateLabel**方法，该方法便是我们重点关注的地方。
+
+```c#
+protected override void OnEnable()
+{
+    base.OnEnable();
+    if (m_Text == null)
+        m_Text = string.Empty;
+    m_DrawStart = 0;
+    m_DrawEnd = m_Text.Length;
+
+    if (m_CachedInputRenderer != null)     m_CachedInputRenderer.SetMaterial(m_TextComponent.GetModifiedMaterial(Graphic.defaultGraphicMaterial), Texture2D.whiteTexture);
+
+    //向Text组件注册事件监听，主要当Graphic进行顶点与材质的重建标记时会执行相应的监听事件
+    if (m_TextComponent != null)
+    {
+        m_TextComponent.RegisterDirtyVerticesCallback(MarkGeometryAsDirty);
+        m_TextComponent.RegisterDirtyVerticesCallback(UpdateLabel);
+        m_TextComponent.RegisterDirtyMaterialCallback(UpdateCaretMaterial);
+        UpdateLabel();//更新文本
+    }
+}
+```
+
+**Disable阶段**：非常普通地做了一些清理工作。
+
+```c#
+protected override void OnDisable()
+{
+    // 关闭携程
+    m_BlinkCoroutine = null;
+    //将各种属性做无效处理
+    DeactivateInputField();
+    //注销Text中的事件监听
+    if (m_TextComponent != null)
+    {
+        m_TextComponent.UnregisterDirtyVerticesCallback(MarkGeometryAsDirty);
+        m_TextComponent.UnregisterDirtyVerticesCallback(UpdateLabel);
+        m_TextComponent.UnregisterDirtyMaterialCallback(UpdateCaretMaterial);
+    }
+    CanvasUpdateRegistry.UnRegisterCanvasElementForRebuild(this);
+    if (m_CachedInputRenderer != null)
+        m_CachedInputRenderer.Clear();
+    //清除网格
+    if (m_Mesh != null)
+        DestroyImmediate(m_Mesh);
+    m_Mesh = null;
+    base.OnDisable();
+}
+```
+
+
+
+### 事件接口
+
+UI组件的交互都是基于输入事件的，我们按照使用**InputField**的操作流程来一一分析各个事件。
+
+#### **第一步：点击激活InputField**
+
+```c#
+public virtual void OnPointerClick(PointerEventData eventData)
+{
+    if (eventData.button != PointerEventData.InputButton.Left)
+        return;
+	//激活输入框组件
+    ActivateInputField();
+}
+```
+
+**InputField**中使用了Unity提供的键盘接口类型（**TouchScreenKeyboard**），该接口记录了我们的输入内容。
+
+```c#
+public void ActivateInputField()
+{
+    if (m_TextComponent == null || m_TextComponent.font == null || !IsActive() || !IsInteractable())
+        return;
+
+    if (isFocused)
+    {
+        if (m_Keyboard != null && !m_Keyboard.active)
+        {
+            //激活键盘接口,并将当前输入框设置进键盘接口中
+            m_Keyboard.active = true;
+            m_Keyboard.text = m_Text;
+        }
+    }
+
+    m_ShouldActivateNextUpdate = true;
+}
+```
+
+到此，激活操作就结束了。主要内容是激活了**TouchScreenKeyboard**，来保存我们的输入。
+
+#### **第二步：输入文字**
+
+**InputField**采用了每帧更新的方式来更新我们的输入（**LateUpdate**）。
+
+**获取键盘输入信息，并验证信息的有效字符，并更新。**
+
+```c#
+protected virtual void LateUpdate()
+{
+    if (m_ShouldActivateNextUpdate)
+    {
+        if (!isFocused)
+        {
+            ActivateInputFieldInternal();
+            m_ShouldActivateNextUpdate = false;
+            return;
+        }
+        m_ShouldActivateNextUpdate = false;
+    }
+    if (InPlaceEditing() || !isFocused)
+        return;
+    AssignPositioningIfNeeded();
+    if (m_Keyboard == null || m_Keyboard.done)
+    {
+        if (m_Keyboard != null)
+        {
+            if (!m_ReadOnly)
+                text = m_Keyboard.text;
+            if (m_Keyboard.wasCanceled)
+                m_WasCanceled = true;
+        }
+        OnDeselect(null);
+        return;
+    }
+    //获取输入信息
+    string val = m_Keyboard.text;
+    if (m_Text != val)
+    {
+        //只读情况则无法改变输入内容
+        if (m_ReadOnly)
+        {
+            m_Keyboard.text = m_Text;
+        }
+        else
+        {
+            m_Text = "";
+            for (int i = 0; i < val.Length; ++i)
+            {
+                char c = val[i];
+                if (c == '\r' || (int)c == 3)
+                    c = '\n';
+                //验证输入内容
+                if (onValidateInput != null)
+                    c = onValidateInput(m_Text, m_Text.Length, c);
+                else if (characterValidation != CharacterValidation.None)
+                    c = Validate(m_Text, m_Text.Length, c);//默认的验证方法
+                //限制行时当存在换行情况则停止更新
+                if (lineType == LineType.MultiLineSubmit && c == '\n')
+                {
+                    m_Keyboard.text = m_Text;
+
+                    OnDeselect(null);
+                    return;
+                }
+                if (c != 0)
+                    m_Text += c;
+            }
+            //字数限制的情况进行切割
+            if (characterLimit > 0 && m_Text.Length > characterLimit)
+                m_Text = m_Text.Substring(0, characterLimit);
+
+            if (m_Keyboard.canGetSelection)
+            {
+                UpdateCaretFromKeyboard();
+            }
+            else
+            {
+                caretPositionInternal = caretSelectPositionInternal = m_Text.Length;
+            }
+            if (m_Text != val)
+                m_Keyboard.text = m_Text;
+            //执行事件并更新文本显示
+            SendOnValueChangedAndUpdateLabel();
+        }
+    }
+    else if (m_Keyboard.canGetSelection)
+    {
+        UpdateCaretFromKeyboard();
+    }
+
+    //当键盘输入完毕时，执行Deselect,会关闭键盘并执行编辑完成的事件
+    if (m_Keyboard.done)
+    {
+        if (m_Keyboard.wasCanceled)
+            m_WasCanceled = true;
+
+        OnDeselect(null);
+    }
+}
+```
+
+**更新显示内容**
+
+
+```C#
+protected void UpdateLabel()
+{
+    if (m_TextComponent != null && m_TextComponent.font != null && !m_PreventFontCallback)
+    {
+        m_PreventFontCallback = true;
+
+        string fullText;
+        if (compositionString.Length > 0)
+            fullText = text.Substring(0, m_CaretPosition) + compositionString + text.Substring(m_CaretPosition);
+        else
+            fullText = text;
+
+        string processed;
+        //输入类型为密码类型时，用*替换
+        if (inputType == InputType.Password)
+            processed = new string(asteriskChar, fullText.Length);
+        else
+            processed = fullText;
+
+        bool isEmpty = string.IsNullOrEmpty(fullText);
+
+        if (m_Placeholder != null)
+            m_Placeholder.enabled = isEmpty;
+
+        if (!m_AllowInput)
+        {
+            m_DrawStart = 0;
+            m_DrawEnd = m_Text.Length;
+        }
+
+        if (!isEmpty)
+        {
+            Vector2 extents = m_TextComponent.rectTransform.rect.size;
+
+            var settings = m_TextComponent.GetGenerationSettings(extents);
+            settings.generateOutOfBounds = true;
+            //生成mesh数据
+            cachedInputTextGenerator.PopulateWithErrors(processed, settings, gameObject);
+            //计算光标位置
+            SetDrawRangeToContainCaretPosition(caretSelectPositionInternal);
+
+            processed = processed.Substring(m_DrawStart, Mathf.Min(m_DrawEnd, processed.Length) - m_DrawStart);
+            //通过携程显示光标
+            SetCaretVisible();
+        }
+        m_TextComponent.text = processed;
+        MarkGeometryAsDirty();
+        m_PreventFontCallback = false;
+    }
+}
+```
+
+#### **第三步：结束编辑**
+
+由**LateUpdate**检测**m_Keyboard.done**，或者执行**Deselect**事件时（变更目标时执行）
+
+```c#
+//取消inputfield的激活
+public void DeactivateInputField()
+{
+    if (!m_AllowInput)
+        return;
+    //处理相关输入事件的属性,将其重置
+    m_HasDoneFocusTransition = false;
+    m_AllowInput = false;
+    if (m_Placeholder != null)
+        m_Placeholder.enabled = string.IsNullOrEmpty(m_Text);
+    if (m_TextComponent != null && IsInteractable())
+    {
+        if (m_WasCanceled)
+            text = m_OriginalText;
+        if (m_Keyboard != null)
+        {
+            m_Keyboard.active = false;
+            m_Keyboard = null;
+        }
+        m_CaretPosition = m_CaretSelectPosition = 0;
+        //执行编辑完毕的事件监听
+        SendOnSubmit();
+        input.imeCompositionMode = IMECompositionMode.Auto;
+    }
+
+    MarkGeometryAsDirty();
+}
+```
 
 
 
