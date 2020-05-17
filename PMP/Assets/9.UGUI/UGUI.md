@@ -2465,7 +2465,169 @@ public void DeactivateInputField()
 
 ***
 
+## Slider
 
+> **BaseClass: Selectable**
+>
+> **Interface: IInitializePotentialDragHandler,IDragHandler,ICanvasElement**
+>
+> **Intro: UGUI中滑动条组件**
+
+- **initializePotentialDrag**：提前告知可能触发拖拽的接口，这个接口只有在存在**IDragHandler**接口时才会触发，当点击或触碰时便触发了（**会发生在BeginDrag之前**）
+- **IDragHandler**：拖拽过程事件监听
+- **ICanvasElement** ：Canvas元素(重建接口)，当Canvas发生更新时重建（void Rebuild）
+
+**Slider**，是UGUI中滑动条组件。通过操作滑块控制一个值在**minValue** ~ **maxValue**变化，并提供了一个事件接口**onValueChanged**来监听值的变化。
+
+
+
+### 初始化
+
+**Enable阶段**：只做了初始值的Set操作，以及显示上的刷新
+
+```c#
+protected override void OnEnable()
+{
+    base.OnEnable();
+    UpdateCachedReferences();
+    Set(m_Value, false);
+    //更新显示
+    UpdateVisuals();
+}
+```
+
+**Disable阶段：**无特殊处理
+
+### 交互事件
+
+**Slider**主要通过**PointerDown**、**Drag**、**Move**三种事件进行交互上的处理。
+
+#### 点击&拖拽
+
+点击与拖拽的逻辑是相同的，通过**UpdateDrag**方法来计算出当前位置与整体区域的**系数**，通过该系数更新value值的变化。
+
+```c#
+public override void OnPointerDown(PointerEventData eventData)
+{
+    //若发生拖拽则不需要点击单独处理
+    if (!MayDrag(eventData))
+        return;
+    base.OnPointerDown(eventData);
+    m_Offset = Vector2.zero;
+    if (m_HandleContainerRect != null && RectTransformUtility.RectangleContainsScreenPoint(m_HandleRect, eventData.position, eventData.enterEventCamera))
+    {
+        //计算触点在Slider中的本地坐标
+        Vector2 localMousePos;
+        if (RectTransformUtility.ScreenPointToLocalPointInRectangle(m_HandleRect, eventData.position, eventData.pressEventCamera, out localMousePos))
+            m_Offset = localMousePos;
+    }
+    else
+    {
+        // 超出Slider范围时 交给拖拽时的逻辑处理外部点
+        UpdateDrag(eventData, eventData.pressEventCamera);
+    }
+}
+```
+
+```C#
+public virtual void OnDrag(PointerEventData eventData)
+{
+    if (!MayDrag(eventData))
+        return;
+    //更新拖拽
+    UpdateDrag(eventData, eventData.pressEventCamera);
+}
+```
+
+**计算插值**
+
+```c#
+void UpdateDrag(PointerEventData eventData, Camera cam)
+{
+    RectTransform clickRect = m_HandleContainerRect ?? m_FillContainerRect;
+    if (clickRect != null && clickRect.rect.size[(int)axis] > 0)
+    {
+        Vector2 localCursor;
+        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(clickRect, eventData.position, cam, out localCursor))
+            return;
+        localCursor -= clickRect.rect.position;
+		//计算区域大小来确定插值数
+        float val = Mathf.Clamp01((localCursor - m_Offset)[(int)axis] / clickRect.rect.size[(int)axis]);
+        normalizedValue = (reverseValue ? 1f - val : val);
+    }
+}
+```
+
+**在normalizedValue的Set方法中通过插值的方式算出当前value的值**
+
+`this.value = Mathf.Lerp(minValue, maxValue, value);`
+
+#### 移动
+
+**在OnMove事件中，是直接通过Move的数据进行value值的计算。**
+
+每次移动的变化由**stepSize**值决定：`float stepSize { get { return wholeNumbers ? 1 : (maxValue - minValue) * 0.1f; } }`
+
+```C#
+public override void OnMove(AxisEventData eventData)
+{
+    if (!IsActive() || !IsInteractable())
+    {
+        base.OnMove(eventData);
+        return;
+    }
+	//通过方向判断值的加减
+    switch (eventData.moveDir)
+    {
+        case MoveDirection.Left:
+            if (axis == Axis.Horizontal && FindSelectableOnLeft() == null)
+                Set(reverseValue ? value + stepSize : value - stepSize);
+            else
+                base.OnMove(eventData);
+            break;
+        case MoveDirection.Right:
+            if (axis == Axis.Horizontal && FindSelectableOnRight() == null)
+                Set(reverseValue ? value - stepSize : value + stepSize);
+            else
+                base.OnMove(eventData);
+            break;
+        case MoveDirection.Up:
+            if (axis == Axis.Vertical && FindSelectableOnUp() == null)
+                Set(reverseValue ? value - stepSize : value + stepSize);
+            else
+                base.OnMove(eventData);
+            break;
+        case MoveDirection.Down:
+            if (axis == Axis.Vertical && FindSelectableOnDown() == null)
+                Set(reverseValue ? value + stepSize : value - stepSize);
+            else
+                base.OnMove(eventData);
+            break;
+    }
+}
+```
+
+### Set
+
+```C#
+protected virtual void Set(float input, bool sendCallback)
+{
+    //对输入值进行范围限制，并根据整数开关进行是否四舍五入的变化。
+    float newValue = ClampValue(input);
+    //值若没发生改变则不做任何处理
+    if (m_Value == newValue)
+        return;
+    m_Value = newValue;
+    //更新显示
+    UpdateVisuals();
+    if (sendCallback)
+    {
+        UISystemProfilerApi.AddMarker("Slider.value", this);
+        //执行value变化的事件
+        m_OnValueChanged.Invoke(newValue);
+    }
+}
+```
 
 
 
