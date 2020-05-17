@@ -2173,7 +2173,7 @@ public void RefreshShownValue()
 
 为了满足各种要求的输入，**InputField**的代码量非常的大（**2400+行**）是目前UGUI组件中**内容量最大**的组件，逻辑并不复杂，只在于它实现的输入类型种类繁多所以初看源码会有一种**懵**的感觉。所以本章的分析思路主要围绕其主要的输入功能的实现过程，并针对一种输入类型进行分析，理清思路。
 
-### **初始化**
+**初始化**
 
 一如既往，阅读源码的最好方式就是先从生命周期开始。
 
@@ -2230,11 +2230,11 @@ protected override void OnDisable()
 
 
 
-### 事件接口
+**事件接口**
 
 UI组件的交互都是基于输入事件的，我们按照使用**InputField**的操作流程来一一分析各个事件。
 
-#### **第一步：点击激活InputField**
+**第一步：点击激活InputField**
 
 ```c#
 public virtual void OnPointerClick(PointerEventData eventData)
@@ -2270,7 +2270,7 @@ public void ActivateInputField()
 
 到此，激活操作就结束了。主要内容是激活了**TouchScreenKeyboard**，来保存我们的输入。
 
-#### **第二步：输入文字**
+**第二步：输入文字**
 
 **InputField**采用了每帧更新的方式来更新我们的输入（**LateUpdate**）。
 
@@ -2427,7 +2427,7 @@ protected void UpdateLabel()
 }
 ```
 
-#### **第三步：结束编辑**
+**第三步：结束编辑**
 
 由**LateUpdate**检测**m_Keyboard.done**，或者执行**Deselect**事件时（变更目标时执行）
 
@@ -2460,6 +2460,10 @@ public void DeactivateInputField()
     MarkGeometryAsDirty();
 }
 ```
+
+
+
+***
 
 
 
@@ -2498,4 +2502,4 @@ public void DeactivateInputField()
 
 # 用时
 
-**24h**
+**27h**
