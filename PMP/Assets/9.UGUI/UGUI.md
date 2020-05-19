@@ -429,6 +429,179 @@ Canvas在渲染前会调用willRenderCanvases，即执行PerformUpdate ，流程
 
 ***
 
+## LayoutSystem
+
+> **Related Class:  LayoutRebuilder、LayoutGroup、Canvas、CanvasUpdateRegistry、**
+>
+> **Related  Interface: ILayoutElement、ILayoutController、ILayoutIgnorer、**
+>
+> **Intro: CanvasUpdateSystem中更新布局的具体实现系统。**
+
+- **ILayoutElement**: 布局元素，布局的接收方，存储有关布局的信息
+- **ILayoutController**：布局控制接口，布局的实施方，制定布局规则
+- **ILayoutIgnorer**：忽略布局接口，忽略开关开启状态将忽略该物体的布局
+
+**LayoutSystem**，是UGUI中由**CanvasUpdateSystem**发起（**m_LayoutRebuildQueue中大部分都是LayoutRebuilder**）的关于**布局排列的处理系统**。
+
+**本文将从LayoutSystem的响应逻辑切入，并结合具体的组件来分析整个LayoutSystem。**
+
+### LayoutRebuilder
+
+#### 标记
+
+UGUI组件（如**Graphic**、**ScrollRect**...）在需要布局处理时会通过标记的方式将自身**RectTransform**封装成一个**LayoutRebuilder**对象添加进**CanvasUpdateSystem**中的布局队列（**LayoutRebuildQueue**）中等待被重建。
+
+```c#
+public static void MarkLayoutForRebuild(RectTransform rect)
+{
+    if (rect == null || rect.gameObject == null)
+        return;
+    var comps = ListPool<Component>.Get();
+    bool validLayoutGroup = true;
+    RectTransform layoutRoot = rect;
+    var parent = layoutRoot.parent as RectTransform;
+    //从物体父级路径寻中寻找是否存在布局组件(ILayoutGroup)
+    while (validLayoutGroup && !(parent == null || parent.gameObject == null))
+    {
+        validLayoutGroup = false;
+        parent.GetComponents(typeof(ILayoutGroup), comps);
+        for (int i = 0; i < comps.Count; ++i)
+        {
+            var cur = comps[i];
+            if (cur != null && cur is Behaviour && ((Behaviour)cur).isActiveAndEnabled)
+            {
+                validLayoutGroup = true;
+                layoutRoot = parent;
+                break;
+            }
+        }
+        parent = parent.parent as RectTransform;
+    }
+    // 检查自身是否满足布局要求
+    if (layoutRoot == rect && !ValidController(layoutRoot, comps))
+    {
+        ListPool<Component>.Release(comps);
+        return;
+    }
+	//添加进CanvasUpdateSystem中
+    MarkLayoutRootForRebuild(layoutRoot);
+    ListPool<Component>.Release(comps);
+}
+```
+
+```c#
+private static void MarkLayoutRootForRebuild(RectTransform controller)
+{
+    if (controller == null)
+        return;
+    //生成一个rebuilder对象
+    var rebuilder = s_Rebuilders.Get();
+    //初始化数据
+    rebuilder.Initialize(controller);
+    //将rebuilder对象注册进CanvasUpdate中，等待Canvas的重建命令
+    if (!CanvasUpdateRegistry.TryRegisterCanvasElementForLayoutRebuild(rebuilder))
+        s_Rebuilders.Release(rebuilder);
+}
+```
+
+#### 重建
+
+当重建指令触发时（详情）,**LayoutRebuilder**将对自身即其子级路径中的所有**ILayoutElement**与**ILayoutController**执行相应的接口。
+
+```c#
+//CanvasUpdateSystem触发重建
+public void Rebuild(CanvasUpdate executing)
+{
+    switch (executing)
+    {
+        case CanvasUpdate.Layout:
+            PerformLayoutCalculation(m_ToRebuild, e => (e as ILayoutElement).CalculateLayoutInputHorizontal());
+            PerformLayoutControl(m_ToRebuild, e => (e as ILayoutController).SetLayoutHorizontal());
+            PerformLayoutCalculation(m_ToRebuild, e => (e as ILayoutElement).CalculateLayoutInputVertical());
+            PerformLayoutControl(m_ToRebuild, e => (e as ILayoutController).SetLayoutVertical());
+            break;
+    }
+}
+```
+
+
+
+### LayoutGroup
+
+> **BaseClass: UIBehaviour**
+>
+> **Interface: ILayoutElement, ILayoutGroup**
+>
+> **Intro:布局系统的实施组件的基类**
+
+虽然UGUI组件中有一些组件都继承了**ILayoutElement**接口，但并不会涉及对接口方法的实现。这是因为这些组件主要是布局操作的接收方，**只需要通过该接口被布局实施方所发现即可**。
+
+**LayoutGroup**，是布局组件的基类（**GridLayoutGroup、HorizontalOrVerticalLayoutGroup**）。接下来将通过该类具体分析布局功能的实现。
+
+#### Rebuild
+
+**STEP1**:延续**LayoutRebuilder**的**Rebuild**方法，首先被执行的是**ILayoutElement**的**CalculateLayoutInputHorizontal**方法。该方法将收集其子节点下所有没有被标记**ignoreLayout**的物体（**m_RectChildren**）
+
+```c#
+public virtual void CalculateLayoutInputHorizontal()
+{
+    //清空list，准备收集子节点下没有被ignoreLayout的物体
+    m_RectChildren.Clear();
+    var toIgnoreList = ListPool<Component>.Get();
+    for (int i = 0; i < rectTransform.childCount; i++)
+    {
+        var rect = rectTransform.GetChild(i) as RectTransform;
+        if (rect == null || !rect.gameObject.activeInHierarchy)
+            continue;
+        rect.GetComponents(typeof(ILayoutIgnorer), toIgnoreList);
+        if (toIgnoreList.Count == 0)
+        {
+            m_RectChildren.Add(rect);
+            continue;
+        }
+        for (int j = 0; j < toIgnoreList.Count; j++)
+        {
+            var ignorer = (ILayoutIgnorer)toIgnoreList[j];
+            if (!ignorer.ignoreLayout)
+            {
+                m_RectChildren.Add(rect);
+                break;
+            }
+        }
+    }
+    ListPool<Component>.Release(toIgnoreList);
+    m_Tracker.Clear();
+}
+```
+
+**STEP2**:接着会执行**ILayoutController**的**SetLayoutHorizontal**方法。这在**GridLayoutGroup**、**HorizontalLayoutGroup**、**VerticalLayoutGroup**中有不同的处理，这里以**HorizontalLayoutGroup**为例。
+
+```c#
+//HorizontalLayoutGroup
+public override void SetLayoutHorizontal()
+{
+    SetChildrenAlongAxis(0, false);
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+***
+
 ## Graphic
 
 > **Related Class: Graphic、MaskableGraphic、GraphicRegistry、CanvasUpdateRegistry、VertexHelper**
@@ -1768,7 +1941,6 @@ protected virtual void LateUpdate()
   }
   ```
 
-
 ***
 
 **拖拽交互**
@@ -2661,4 +2833,4 @@ protected virtual void Set(float input, bool sendCallback)
 
 # 用时
 
-**27h**
+**28h**
