@@ -1768,7 +1768,6 @@ protected virtual void LateUpdate()
   }
   ```
 
-  
 
 ***
 
@@ -2479,9 +2478,7 @@ public void DeactivateInputField()
 
 **Slider**，是UGUI中滑动条组件。通过操作滑块控制一个值在**minValue** ~ **maxValue**变化，并提供了一个事件接口**onValueChanged**来监听值的变化。
 
-
-
-### 初始化
+**初始化**
 
 **Enable阶段**：只做了初始值的Set操作，以及显示上的刷新
 
@@ -2498,11 +2495,11 @@ protected override void OnEnable()
 
 **Disable阶段：**无特殊处理
 
-### 交互事件
+**交互事件**
 
 **Slider**主要通过**PointerDown**、**Drag**、**Move**三种事件进行交互上的处理。
 
-#### 点击&拖拽
+**点击&拖拽**
 
 点击与拖拽的逻辑是相同的，通过**UpdateDrag**方法来计算出当前位置与整体区域的**系数**，通过该系数更新value值的变化。
 
@@ -2562,7 +2559,7 @@ void UpdateDrag(PointerEventData eventData, Camera cam)
 
 `this.value = Mathf.Lerp(minValue, maxValue, value);`
 
-#### 移动
+**移动**
 
 **在OnMove事件中，是直接通过Move的数据进行value值的计算。**
 
@@ -2607,7 +2604,7 @@ public override void OnMove(AxisEventData eventData)
 }
 ```
 
-### Set
+**Set**
 
 ```C#
 protected virtual void Set(float input, bool sendCallback)
