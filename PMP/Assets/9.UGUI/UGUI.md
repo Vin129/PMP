@@ -580,6 +580,7 @@ public virtual void CalculateLayoutInputHorizontal()
 //HorizontalLayoutGroup
 public override void SetLayoutHorizontal()
 {
+    //根据轴设置子物体的布局
     SetChildrenAlongAxis(0, false);
 }
 ```
