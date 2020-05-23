@@ -585,11 +585,52 @@ public virtual void CalculateLayoutInputHorizontal()
 }
 ```
 
+**CalcAlongAxis** 主要是做**LayoutGroup**的一些初始化参数的计算。
 
+```c#
+//LayoutGroup 
+protected void CalcAlongAxis(int axis, bool isVertical)
+{
+    float combinedPadding = (axis == 0 ? padding.horizontal : padding.vertical);
+    bool controlSize = (axis == 0 ? m_ChildControlWidth : m_ChildControlHeight);
+    bool childForceExpandSize = (axis == 0 ? childForceExpandWidth : childForceExpandHeight);
+    float totalMin = combinedPadding;
+    float totalPreferred = combinedPadding;
+    float totalFlexible = 0;
+    bool alongOtherAxis = (isVertical ^ (axis == 1));
+    for (int i = 0; i < rectChildren.Count; i++)
+    {
+        RectTransform child = rectChildren[i];
+        float min, preferred, flexible;
+        GetChildSizes(child, axis, controlSize, childForceExpandSize, out min, out preferred, out flexible);
+        if (alongOtherAxis)
+        {
+            //另一条轴的情况简单处理，取其中最大的子物体的值即可
+            totalMin = Mathf.Max(min + combinedPadding, totalMin);
+            totalPreferred = Mathf.Max(preferred + combinedPadding, totalPreferred);
+            totalFlexible = Mathf.Max(flexible, totalFlexible);
+        }
+        else
+        {
+            //目标轴处理，数值为子物体数值的累加
+            totalMin += min + spacing;
+            totalPreferred += preferred + spacing; //包括间隔
 
-
-
-
+            // Increment flexible size with element's flexible size.
+            totalFlexible += flexible;
+        }
+    
+    //去掉多余的一次间隔
+    if (!alongOtherAxis && rectChildren.Count > 0)
+    {
+        totalMin -= spacing;
+        totalPreferred -= spacing;
+    }
+    totalPreferred = Mathf.Max(totalMin, totalPreferred);
+    //根据轴设置 m_TotalXXX值
+    SetLayoutInputForAxis(totalMin, totalPreferred, totalFlexible, axis);
+}
+```
 
 **STEP2**:接着会执行**ILayoutController**的**SetLayoutHorizontal**方法。这在**GridLayoutGroup**、**HorizontalLayoutGroup**、**VerticalLayoutGroup**中有不同的处理。
 
@@ -602,11 +643,104 @@ public override void SetLayoutHorizontal()
 }
 ```
 
+**LayoutGroup**组件如何调整子物体的位置与大小一句话概括：利用了**Unity RectTransform**中的一个方法
+
+`**SetInsetAndSizeFromParentEdge**(RectTransform.Edge **edge**, float **inset**, float **size**);`
+
+布局物体的方法主要是在 **择出边（Edge）**,**计算出距离（inset）**,**计算出子物体的大小（size）**。
+
+```c#
+//LayoutGroup 
+protected void SetChildrenAlongAxis(int axis, bool isVertical)
+{
+    //获取跟坐标轴有关的设置
+    float size = rectTransform.rect.size[axis];
+    bool controlSize = (axis == 0 ? m_ChildControlWidth : m_ChildControlHeight);
+    bool childForceExpandSize = (axis == 0 ? childForceExpandWidth : childForceExpandHeight);
+    float alignmentOnAxis = GetAlignmentOnAxis(axis);
+
+    bool alongOtherAxis = (isVertical ^ (axis == 1)); // 当二者不同时为true  例(水平 y轴,垂直 x轴)
+    if (alongOtherAxis)
+    {
+        //在水平或垂直布局中,另外一条轴的布局操作相对简单一些
+        //实际尺寸，根据padding计算
+        float innerSize = size - (axis == 0 ? padding.horizontal : padding.vertical);
+        for (int i = 0; i < rectChildren.Count; i++)
+        {
+            RectTransform child = rectChildren[i];
+            float min, preferred, flexible;
+            //获取子物体的尺寸,最小、合适、灵活尺寸
+            GetChildSizes(child, axis, controlSize, childForceExpandSize, out min, out preferred, out flexible);
+            //若强制填充，则会以该部件组件的尺寸来决定，反之则以子物体的最佳尺寸
+            float requiredSpace = Mathf.Clamp(innerSize, min, flexible > 0 ? size : preferred);
+            //计算距离边的距离
+            float startOffset = GetStartOffset(axis, requiredSpace);
+            if (controlSize)
+            {
+                // 根据轴选取矩形的边，以及距离、尺寸，设置子物体的位置（API:SetInsetAndSizeFromParentEdge）
+                SetChildAlongAxis(child, axis, startOffset, requiredSpace);
+            }
+            else
+            {
+                float offsetInCell = (requiredSpace - child.sizeDelta[axis]) * alignmentOnAxis;
+                SetChildAlongAxis(child, axis, startOffset + offsetInCell);
+            }
+        }
+    }
+    else
+    {
+        //起始位置:对于边的距离
+        float pos = (axis == 0 ? padding.left : padding.top);
+        if (GetTotalFlexibleSize(axis) == 0 && GetTotalPreferredSize(axis) < size)
+            pos = GetStartOffset(axis, GetTotalPreferredSize(axis) - (axis == 0 ? padding.horizontal : padding.vertical));
+        //差值
+        float minMaxLerp = 0;
+        if (GetTotalMinSize(axis) != GetTotalPreferredSize(axis))
+            minMaxLerp = Mathf.Clamp01((size - GetTotalMinSize(axis)) / (GetTotalPreferredSize(axis) - GetTotalMinSize(axis)));
+
+        float itemFlexibleMultiplier = 0;
+        if (size > GetTotalPreferredSize(axis))
+        {
+            if (GetTotalFlexibleSize(axis) > 0)
+                itemFlexibleMultiplier = (size - GetTotalPreferredSize(axis)) / GetTotalFlexibleSize(axis);
+        }
+
+        for (int i = 0; i < rectChildren.Count; i++)
+        {
+            RectTransform child = rectChildren[i];
+            float min, preferred, flexible;
+            GetChildSizes(child, axis, controlSize, childForceExpandSize, out min, out preferred, out flexible);
+
+            float childSize = Mathf.Lerp(min, preferred, minMaxLerp);
+            childSize += flexible * itemFlexibleMultiplier;
+            if (controlSize)
+            {
+                // 根据轴选取矩形的边，以及距离、尺寸，设置子物体的位置（API:SetInsetAndSizeFromParentEdge）
+                SetChildAlongAxis(child, axis, pos, childSize);
+            }
+            else
+            {
+                float offsetInCell = (childSize - child.sizeDelta[axis]) * alignmentOnAxis;
+                SetChildAlongAxis(child, axis, pos + offsetInCell);
+            }
+            //更新距离，累计子物体尺寸与间隔
+            pos += childSize + spacing;
+        }
+    }
+}
+```
+
+到此，布局过程就已经完成了。
 
 
 
-
-
+ - **Padding**：内部边距，调整实际用于布局区域的大小
+ - **Cell Size**：子物体尺寸，设置被布局物体的尺寸
+ - **Spacing** ：子物体直接的间隔
+ - **Start Corner** ：起始位置，子物体起始放置的位置（四个角）
+ - **Start Axis** ：起始轴，优先按照横向/纵向排布
+ - **Child Alignment** ：子物体对齐方式
+ - **Constraint** ：约束类型，可以限制行列数
 
 
 
@@ -2851,4 +2985,4 @@ protected virtual void Set(float input, bool sendCallback)
 
 # 用时
 
-**28h**
+**30h**
