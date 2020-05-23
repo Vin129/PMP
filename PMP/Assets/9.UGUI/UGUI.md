@@ -540,9 +540,20 @@ public void Rebuild(CanvasUpdate executing)
 
 #### Rebuild
 
-**STEP1**:延续**LayoutRebuilder**的**Rebuild**方法，首先被执行的是**ILayoutElement**的**CalculateLayoutInputHorizontal**方法。该方法将收集其子节点下所有没有被标记**ignoreLayout**的物体（**m_RectChildren**）
+**STEP1**:延续**LayoutRebuilder**的**Rebuild**方法，首先被执行的是**ILayoutElement**的**CalculateLayoutInputHorizontal**方法。该方法将收集其子节点下所有没有被标记**ignoreLayout**的物体（**m_RectChildren**），以**HorizontalLayoutGroup**为例。
 
 ```c#
+// HorizontalLayoutGroup
+public override void CalculateLayoutInputHorizontal()
+{
+    //  基类（LayoutGroup）方法
+    base.CalculateLayoutInputHorizontal();
+    CalcAlongAxis(0, false);
+}
+```
+
+```c#
+//LayoutGroup 
 public virtual void CalculateLayoutInputHorizontal()
 {
     //清空list，准备收集子节点下没有被ignoreLayout的物体
@@ -574,7 +585,13 @@ public virtual void CalculateLayoutInputHorizontal()
 }
 ```
 
-**STEP2**:接着会执行**ILayoutController**的**SetLayoutHorizontal**方法。这在**GridLayoutGroup**、**HorizontalLayoutGroup**、**VerticalLayoutGroup**中有不同的处理，这里以**HorizontalLayoutGroup**为例。
+
+
+
+
+
+
+**STEP2**:接着会执行**ILayoutController**的**SetLayoutHorizontal**方法。这在**GridLayoutGroup**、**HorizontalLayoutGroup**、**VerticalLayoutGroup**中有不同的处理。
 
 ```c#
 //HorizontalLayoutGroup
