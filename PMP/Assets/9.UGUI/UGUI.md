@@ -732,7 +732,15 @@ protected void SetChildrenAlongAxis(int axis, bool isVertical)
 
 到此，布局过程就已经完成了。
 
+### GridLayoutGroup
 
+> **BaseClass: LayoutGroup**
+>
+> **Interface: 间接继承了ILayoutElement, ILayoutGroup**
+>
+> **Intro:布局系统中的网格布局组件**
+
+**GridLayoutGroup**，是**LayoutGroup**衍生的用于网格布局的组件，不同于纵横布局，网格布局中严格要求了对子物体尺寸的设置。
 
  - **Padding**：内部边距，调整实际用于布局区域的大小
  - **Cell Size**：子物体尺寸，设置被布局物体的尺寸
@@ -741,6 +749,145 @@ protected void SetChildrenAlongAxis(int axis, bool isVertical)
  - **Start Axis** ：起始轴，优先按照横向/纵向排布
  - **Child Alignment** ：子物体对齐方式
  - **Constraint** ：约束类型，可以限制行列数
+
+#### 布局过程
+
+**STEP1**:依然是延续**LayoutRebuilder**的**Rebuild**方法，大致流程如**HorizontalOrVerticalLayoutGroup**相似，不同点在于**纵横组件**只针对自身的**单一轴**进行布局，而**网格组件**则要涵盖**两条轴**上的布局逻辑。首先被执行的是**ILayoutElement**的**CalculateLayoutInputHorizontal**方法。
+
+```c#
+public override void CalculateLayoutInputHorizontal()
+{
+    //LayoutGroup 基类方法
+    base.CalculateLayoutInputHorizontal();
+    //若对排列有约束限制，则初始化设置参数
+    //这里是横轴则只获取列数的限制
+    //CalculateLayoutInputVertical中则会获取minRows
+    int minColumns = 0;
+    int preferredColumns = 0;
+    if (m_Constraint == Constraint.FixedColumnCount)
+    {
+        minColumns = preferredColumns = m_ConstraintCount;
+    }
+    else if (m_Constraint == Constraint.FixedRowCount)
+    {
+        minColumns = preferredColumns = Mathf.CeilToInt(rectChildren.Count / (float)m_ConstraintCount - 0.001f);
+    }
+    else
+    {
+        minColumns = 1;
+        preferredColumns = Mathf.CeilToInt(Mathf.Sqrt(rectChildren.Count));
+    }
+    //同HorizontalOrVerticalLayoutGroup组件，初始化参数
+    SetLayoutInputForAxis(
+        padding.horizontal + (cellSize.x + spacing.x) * minColumns - spacing.x,
+        padding.horizontal + (cellSize.x + spacing.x) * preferredColumns - spacing.x,
+        -1, 0);
+}
+```
+
+**STEP2**: **GridLayoutGroup**的布局实现原理上是与**HorizontalOrVerticalLayoutGroup**相同的，依靠**SetInsetAndSizeFromParentEdge**方法实现子物体尺寸与位置的设置。
+
+```c#
+//执行两条轴的布局
+public override void SetLayoutHorizontal()
+{
+    SetCellsAlongAxis(0);
+}
+
+public override void SetLayoutVertical()
+{
+    SetCellsAlongAxis(1);
+}
+```
+
+这里为了保持阅读舒适度就不贴太长的代码块了，根据设置的参数计算出**startOffset（初始位置），cellSize+spacing（尺寸+间隔）**对子物体进行设置。
+
+```C#
+for (int i = 0; i < rectChildren.Count; i++)
+{
+	...
+    SetChildAlongAxis(rectChildren[i], 0, startOffset.x + (cellSize[0] + spacing[0]) * positionX, cellSize[0]);
+    SetChildAlongAxis(rectChildren[i], 1, startOffset.y + (cellSize[1] + spacing[1]) * positionY, cellSize[1]);
+}
+```
+
+***
+
+### ContentSizeFitter
+
+> **BaseClass: UIBehaviour**
+>
+> **Interface: ILayoutSelfController**
+>
+> **Intro:布局系统中尺寸调节组件**
+
+**ContentSizeFitter**，是用于调整组件区域使其自适的组件，一般用于与ScrollRect滑动列表以及纵横布局组件搭配，实现动态数量的滑动列表效果，以及与Text组件一起使用，可以根据文字长短进行区域尺寸的变化。
+
+
+
+**ContentSizeFitter**继承了**ILayoutSelfController**接口（**ILayoutController接口的衍生**），和**LayoutGroup**一样被布局系统所处理。而和**LayoutGroup**不同的地方在于，**ContentSizeFitter**不改变子物体的大小和位置，而是根据子物体（**ILayoutElement**）来改变自身的尺寸。
+
+#### 实现过程
+
+**STEP1**:**ContentSizeFitter Enable**阶段会设置布局标记（脏标记），来触发**Rebuild**
+
+```c#
+protected override void OnEnable()
+{
+    base.OnEnable();
+    SetDirty();
+}
+
+protected void SetDirty()
+{
+	...
+    //封装成LayoutRebuilder等待被重建
+    LayoutRebuilder.MarkLayoutForRebuild(rectTransform);
+}
+```
+
+**STEP2**:当**Canvas**触发重建过程，其封装成的**LayoutRebuilder**执行了**Rebuild**方法。**ContentSizeFitter** 自身并没有继承**ILayoutElement**，所有跳过**Rebuild**的**CalculateLayoutInputHorizontal/Vertical**部分，执行了它的**SetLayoutHorizontal/Vertical**接口方法。
+
+```c#
+public virtual void SetLayoutHorizontal()
+{
+    ...
+    //根据轴进行尺寸的改变
+    HandleSelfFittingAlongAxis(0);
+}
+public virtual void SetLayoutVertical()
+{
+    HandleSelfFittingAlongAxis(1);
+}
+```
+
+```c#
+private void HandleSelfFittingAlongAxis(int axis)
+{
+    //获取目标轴的适应类型
+    FitMode fitting = (axis == 0 ? horizontalFit : verticalFit);
+    //不强制的类型时不会进行尺寸改变
+    if (fitting == FitMode.Unconstrained)
+    {
+        m_Tracker.Add(this, rectTransform, DrivenTransformProperties.None);
+        return;
+    }
+    //添加Tracker的部分无法被修改
+    m_Tracker.Add(this, rectTransform, (axis == 0 ? DrivenTransformProperties.SizeDeltaX : DrivenTransformProperties.SizeDeltaY));
+
+    //根据类型选择适应的尺寸
+    if (fitting == FitMode.MinSize)
+        rectTransform.SetSizeWithCurrentAnchors((RectTransform.Axis)axis, LayoutUtility.GetMinSize(m_Rect, axis));
+    else
+        rectTransform.SetSizeWithCurrentAnchors((RectTransform.Axis)axis, LayoutUtility.GetPreferredSize(m_Rect, axis));
+}
+```
+
+
+
+
+
+
 
 
 
@@ -2985,4 +3132,4 @@ protected virtual void Set(float input, bool sendCallback)
 
 # 用时
 
-**30h**
+**31h**
