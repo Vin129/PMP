@@ -447,7 +447,7 @@ Canvas在渲染前会调用willRenderCanvases，即执行PerformUpdate ，流程
 
 ### LayoutRebuilder
 
-#### 标记
+**标记**
 
 UGUI组件（如**Graphic**、**ScrollRect**...）在需要布局处理时会通过标记的方式将自身**RectTransform**封装成一个**LayoutRebuilder**对象添加进**CanvasUpdateSystem**中的布局队列（**LayoutRebuildQueue**）中等待被重建。
 
@@ -504,7 +504,7 @@ private static void MarkLayoutRootForRebuild(RectTransform controller)
 }
 ```
 
-#### 重建
+**重建**
 
 当重建指令触发时（详情）,**LayoutRebuilder**将对自身即其子级路径中的所有**ILayoutElement**与**ILayoutController**执行相应的接口。
 
@@ -524,7 +524,7 @@ public void Rebuild(CanvasUpdate executing)
 }
 ```
 
-
+***
 
 ### LayoutGroup
 
@@ -538,7 +538,7 @@ public void Rebuild(CanvasUpdate executing)
 
 **LayoutGroup**，是布局组件的基类（**GridLayoutGroup、HorizontalOrVerticalLayoutGroup**）。接下来将通过该类具体分析布局功能的实现。
 
-#### Rebuild
+**Rebuild**
 
 **STEP1**:延续**LayoutRebuilder**的**Rebuild**方法，首先被执行的是**ILayoutElement**的**CalculateLayoutInputHorizontal**方法。该方法将收集其子节点下所有没有被标记**ignoreLayout**的物体（**m_RectChildren**），以**HorizontalLayoutGroup**为例。
 
@@ -732,6 +732,8 @@ protected void SetChildrenAlongAxis(int axis, bool isVertical)
 
 到此，布局过程就已经完成了。
 
+***
+
 ### GridLayoutGroup
 
 > **BaseClass: LayoutGroup**
@@ -750,7 +752,7 @@ protected void SetChildrenAlongAxis(int axis, bool isVertical)
  - **Child Alignment** ：子物体对齐方式
  - **Constraint** ：约束类型，可以限制行列数
 
-#### 布局过程
+**布局过程**
 
 **STEP1**:依然是延续**LayoutRebuilder**的**Rebuild**方法，大致流程如**HorizontalOrVerticalLayoutGroup**相似，不同点在于**纵横组件**只针对自身的**单一轴**进行布局，而**网格组件**则要涵盖**两条轴**上的布局逻辑。首先被执行的是**ILayoutElement**的**CalculateLayoutInputHorizontal**方法。
 
@@ -827,7 +829,7 @@ for (int i = 0; i < rectChildren.Count; i++)
 
 **ContentSizeFitter**继承了**ILayoutSelfController**接口（**ILayoutController接口的衍生**），和**LayoutGroup**一样被布局系统所处理。而和**LayoutGroup**不同的地方在于，**ContentSizeFitter**不改变子物体的大小和位置，而是根据子物体（**ILayoutElement**）来改变自身的尺寸。
 
-#### 实现过程
+**实现过程**
 
 **STEP1**:**ContentSizeFitter Enable**阶段会设置布局标记（脏标记），来触发**Rebuild**
 
