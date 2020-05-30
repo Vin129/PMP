@@ -60,12 +60,4 @@ namespace PMP.Extension
 		{
 		}
 	}
-
-	[System.Obsolete("弃用啦，建议用 Singleton")]
-	public abstract class QSingleton<T> : Singleton<T> where T : QSingleton<T>
-	{
-		protected QSingleton()
-		{
-		}
-	}
 }

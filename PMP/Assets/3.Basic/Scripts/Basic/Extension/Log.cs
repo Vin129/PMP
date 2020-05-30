@@ -5,7 +5,20 @@ using System;
 
 namespace PMP.Extension{
 	public static class Log {
-		#region Base
+		#region Base		
+		public static void I(object message)
+		{
+			UnityEngine.Debug.Log(message.ToString());
+		}
+		public static void W(object message)
+		{
+			UnityEngine.Debug.LogWarning(message.ToString());
+		}
+
+		public static void E(object message)
+		{
+			UnityEngine.Debug.LogError(message.ToString());
+		}
 		public static void I(object message, params object[] args)
 		{
 			UnityEngine.Debug.LogFormat(message.ToString(),args);
