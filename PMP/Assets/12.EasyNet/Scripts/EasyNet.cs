@@ -5,6 +5,9 @@
 	using UnityEngine;
 	public delegate void NetErrorClose();
 	public delegate void  HttpCallback(string resp,string error);
+	public delegate void  SocketCallback(IPacket packet);
+	public delegate IPacket GetPacket();
+	public delegate void RecyclePacket(IPacket packet);
     public class EasyNet : MonoBehaviour
 	{
 		public static EasyNet Instance;
