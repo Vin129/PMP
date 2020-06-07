@@ -22,6 +22,10 @@ public class UnityEngine_AnimationClipWrap
 		L.RegVar("legacy", get_legacy, set_legacy);
 		L.RegVar("humanMotion", get_humanMotion, null);
 		L.RegVar("empty", get_empty, null);
+		L.RegVar("hasGenericRootTransform", get_hasGenericRootTransform, null);
+		L.RegVar("hasMotionFloatCurves", get_hasMotionFloatCurves, null);
+		L.RegVar("hasMotionCurves", get_hasMotionCurves, null);
+		L.RegVar("hasRootCurves", get_hasRootCurves, null);
 		L.RegVar("events", get_events, set_events);
 		L.EndClass();
 	}
@@ -78,7 +82,7 @@ public class UnityEngine_AnimationClipWrap
 			string arg0 = ToLua.CheckString(L, 2);
 			System.Type arg1 = ToLua.CheckMonoType(L, 3);
 			string arg2 = ToLua.CheckString(L, 4);
-			UnityEngine.AnimationCurve arg3 = (UnityEngine.AnimationCurve)ToLua.CheckObject(L, 5, typeof(UnityEngine.AnimationCurve));
+			UnityEngine.AnimationCurve arg3 = (UnityEngine.AnimationCurve)ToLua.CheckObject<UnityEngine.AnimationCurve>(L, 5);
 			obj.SetCurve(arg0, arg1, arg2, arg3);
 			return 0;
 		}
@@ -285,6 +289,82 @@ public class UnityEngine_AnimationClipWrap
 		catch(Exception e)
 		{
 			return LuaDLL.toluaL_exception(L, e, o, "attempt to index empty on a nil value");
+		}
+	}
+
+	[MonoPInvokeCallbackAttribute(typeof(LuaCSFunction))]
+	static int get_hasGenericRootTransform(IntPtr L)
+	{
+		object o = null;
+
+		try
+		{
+			o = ToLua.ToObject(L, 1);
+			UnityEngine.AnimationClip obj = (UnityEngine.AnimationClip)o;
+			bool ret = obj.hasGenericRootTransform;
+			LuaDLL.lua_pushboolean(L, ret);
+			return 1;
+		}
+		catch(Exception e)
+		{
+			return LuaDLL.toluaL_exception(L, e, o, "attempt to index hasGenericRootTransform on a nil value");
+		}
+	}
+
+	[MonoPInvokeCallbackAttribute(typeof(LuaCSFunction))]
+	static int get_hasMotionFloatCurves(IntPtr L)
+	{
+		object o = null;
+
+		try
+		{
+			o = ToLua.ToObject(L, 1);
+			UnityEngine.AnimationClip obj = (UnityEngine.AnimationClip)o;
+			bool ret = obj.hasMotionFloatCurves;
+			LuaDLL.lua_pushboolean(L, ret);
+			return 1;
+		}
+		catch(Exception e)
+		{
+			return LuaDLL.toluaL_exception(L, e, o, "attempt to index hasMotionFloatCurves on a nil value");
+		}
+	}
+
+	[MonoPInvokeCallbackAttribute(typeof(LuaCSFunction))]
+	static int get_hasMotionCurves(IntPtr L)
+	{
+		object o = null;
+
+		try
+		{
+			o = ToLua.ToObject(L, 1);
+			UnityEngine.AnimationClip obj = (UnityEngine.AnimationClip)o;
+			bool ret = obj.hasMotionCurves;
+			LuaDLL.lua_pushboolean(L, ret);
+			return 1;
+		}
+		catch(Exception e)
+		{
+			return LuaDLL.toluaL_exception(L, e, o, "attempt to index hasMotionCurves on a nil value");
+		}
+	}
+
+	[MonoPInvokeCallbackAttribute(typeof(LuaCSFunction))]
+	static int get_hasRootCurves(IntPtr L)
+	{
+		object o = null;
+
+		try
+		{
+			o = ToLua.ToObject(L, 1);
+			UnityEngine.AnimationClip obj = (UnityEngine.AnimationClip)o;
+			bool ret = obj.hasRootCurves;
+			LuaDLL.lua_pushboolean(L, ret);
+			return 1;
+		}
+		catch(Exception e)
+		{
+			return LuaDLL.toluaL_exception(L, e, o, "attempt to index hasRootCurves on a nil value");
 		}
 	}
 

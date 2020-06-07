@@ -199,8 +199,73 @@ public class LeetCodeSolution
     }
 	#endregion
 
-}
+	#region 1
+    public ListNode AddTwoNumbers(ListNode l1, ListNode l2) {
+		if(l1.val == 0 && l2.val == 0)
+			return new ListNode(0);
+		var ln = new ListNode(-1);
+		ListNode last = null;
+		var T = 0;
+		do
+		{
+			int v;
+			if(ln.val != -1 && ln.next == null)
+				ln.next = new ListNode(0);
+			if(last == null && ln.next != null)
+				last = ln.next;
+		
+			v = l1.val + l2.val + T;
+			if(v>=10)
+			{
+				T = 1;
+				v -= 10;
+			}else
+			{
+				T = 0;
+			}
+			if(ln.val == -1)
+			{
+				ln.val = v;
+			}
+			else
+			{
+				last.val = v;
+			}
+			
+			var l1Next = l1.next;
+			var l2Next = l2.next;
+			if(l1Next != null)
+			{
+				l1.val = l1Next.val;
+				l1.next = l1Next.next;
+			}
+			else
+			{
+				l1.val = 0;
+				l1.next = null;
+			}
+			if(l2Next != null)
+			{
+				l2.val = l2Next.val;
+				l2.next = l2Next.next;
+			}
+			else
+			{
+				l2.val = 0;
+				l2.next = null;
+			}
+		}while(l1.next != null || l2.next != null);
+		return ln;
+    }
 
+	#endregion
+
+}
+  public class ListNode {
+      public int val;
+      public ListNode next;
+      public ListNode(int x) { val = x; }
+ }
 
 public static class SolutionExtension
 {

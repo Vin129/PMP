@@ -117,19 +117,19 @@ public class UnityEngine_TransformWrap
 				obj.Translate(arg0);
 				return 0;
 			}
-			else if (count == 3 && TypeChecker.CheckTypes<UnityEngine.Transform>(L, 3))
-			{
-				UnityEngine.Transform obj = (UnityEngine.Transform)ToLua.CheckObject<UnityEngine.Transform>(L, 1);
-				UnityEngine.Vector3 arg0 = ToLua.ToVector3(L, 2);
-				UnityEngine.Transform arg1 = (UnityEngine.Transform)ToLua.ToObject(L, 3);
-				obj.Translate(arg0, arg1);
-				return 0;
-			}
 			else if (count == 3 && TypeChecker.CheckTypes<UnityEngine.Space>(L, 3))
 			{
 				UnityEngine.Transform obj = (UnityEngine.Transform)ToLua.CheckObject<UnityEngine.Transform>(L, 1);
 				UnityEngine.Vector3 arg0 = ToLua.ToVector3(L, 2);
 				UnityEngine.Space arg1 = (UnityEngine.Space)ToLua.ToObject(L, 3);
+				obj.Translate(arg0, arg1);
+				return 0;
+			}
+			else if (count == 3 && TypeChecker.CheckTypes<UnityEngine.Transform>(L, 3))
+			{
+				UnityEngine.Transform obj = (UnityEngine.Transform)ToLua.CheckObject<UnityEngine.Transform>(L, 1);
+				UnityEngine.Vector3 arg0 = ToLua.ToVector3(L, 2);
+				UnityEngine.Transform arg1 = (UnityEngine.Transform)ToLua.ToObject(L, 3);
 				obj.Translate(arg0, arg1);
 				return 0;
 			}
@@ -142,16 +142,6 @@ public class UnityEngine_TransformWrap
 				obj.Translate(arg0, arg1, arg2);
 				return 0;
 			}
-			else if (count == 5 && TypeChecker.CheckTypes<UnityEngine.Transform>(L, 5))
-			{
-				UnityEngine.Transform obj = (UnityEngine.Transform)ToLua.CheckObject<UnityEngine.Transform>(L, 1);
-				float arg0 = (float)LuaDLL.luaL_checknumber(L, 2);
-				float arg1 = (float)LuaDLL.luaL_checknumber(L, 3);
-				float arg2 = (float)LuaDLL.luaL_checknumber(L, 4);
-				UnityEngine.Transform arg3 = (UnityEngine.Transform)ToLua.ToObject(L, 5);
-				obj.Translate(arg0, arg1, arg2, arg3);
-				return 0;
-			}
 			else if (count == 5 && TypeChecker.CheckTypes<UnityEngine.Space>(L, 5))
 			{
 				UnityEngine.Transform obj = (UnityEngine.Transform)ToLua.CheckObject<UnityEngine.Transform>(L, 1);
@@ -159,6 +149,16 @@ public class UnityEngine_TransformWrap
 				float arg1 = (float)LuaDLL.luaL_checknumber(L, 3);
 				float arg2 = (float)LuaDLL.luaL_checknumber(L, 4);
 				UnityEngine.Space arg3 = (UnityEngine.Space)ToLua.ToObject(L, 5);
+				obj.Translate(arg0, arg1, arg2, arg3);
+				return 0;
+			}
+			else if (count == 5 && TypeChecker.CheckTypes<UnityEngine.Transform>(L, 5))
+			{
+				UnityEngine.Transform obj = (UnityEngine.Transform)ToLua.CheckObject<UnityEngine.Transform>(L, 1);
+				float arg0 = (float)LuaDLL.luaL_checknumber(L, 2);
+				float arg1 = (float)LuaDLL.luaL_checknumber(L, 3);
+				float arg2 = (float)LuaDLL.luaL_checknumber(L, 4);
+				UnityEngine.Transform arg3 = (UnityEngine.Transform)ToLua.ToObject(L, 5);
 				obj.Translate(arg0, arg1, arg2, arg3);
 				return 0;
 			}
@@ -268,32 +268,32 @@ public class UnityEngine_TransformWrap
 		{
 			int count = LuaDLL.lua_gettop(L);
 
-			if (count == 2 && TypeChecker.CheckTypes<UnityEngine.Vector3>(L, 2))
-			{
-				UnityEngine.Transform obj = (UnityEngine.Transform)ToLua.CheckObject<UnityEngine.Transform>(L, 1);
-				UnityEngine.Vector3 arg0 = ToLua.ToVector3(L, 2);
-				obj.LookAt(arg0);
-				return 0;
-			}
-			else if (count == 2 && TypeChecker.CheckTypes<UnityEngine.Transform>(L, 2))
+			if (count == 2 && TypeChecker.CheckTypes<UnityEngine.Transform>(L, 2))
 			{
 				UnityEngine.Transform obj = (UnityEngine.Transform)ToLua.CheckObject<UnityEngine.Transform>(L, 1);
 				UnityEngine.Transform arg0 = (UnityEngine.Transform)ToLua.ToObject(L, 2);
 				obj.LookAt(arg0);
 				return 0;
 			}
-			else if (count == 3 && TypeChecker.CheckTypes<UnityEngine.Vector3, UnityEngine.Vector3>(L, 2))
+			else if (count == 2 && TypeChecker.CheckTypes<UnityEngine.Vector3>(L, 2))
 			{
 				UnityEngine.Transform obj = (UnityEngine.Transform)ToLua.CheckObject<UnityEngine.Transform>(L, 1);
 				UnityEngine.Vector3 arg0 = ToLua.ToVector3(L, 2);
-				UnityEngine.Vector3 arg1 = ToLua.ToVector3(L, 3);
-				obj.LookAt(arg0, arg1);
+				obj.LookAt(arg0);
 				return 0;
 			}
 			else if (count == 3 && TypeChecker.CheckTypes<UnityEngine.Transform, UnityEngine.Vector3>(L, 2))
 			{
 				UnityEngine.Transform obj = (UnityEngine.Transform)ToLua.CheckObject<UnityEngine.Transform>(L, 1);
 				UnityEngine.Transform arg0 = (UnityEngine.Transform)ToLua.ToObject(L, 2);
+				UnityEngine.Vector3 arg1 = ToLua.ToVector3(L, 3);
+				obj.LookAt(arg0, arg1);
+				return 0;
+			}
+			else if (count == 3 && TypeChecker.CheckTypes<UnityEngine.Vector3, UnityEngine.Vector3>(L, 2))
+			{
+				UnityEngine.Transform obj = (UnityEngine.Transform)ToLua.CheckObject<UnityEngine.Transform>(L, 1);
+				UnityEngine.Vector3 arg0 = ToLua.ToVector3(L, 2);
 				UnityEngine.Vector3 arg1 = ToLua.ToVector3(L, 3);
 				obj.LookAt(arg0, arg1);
 				return 0;

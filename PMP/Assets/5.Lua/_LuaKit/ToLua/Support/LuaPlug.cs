@@ -91,7 +91,7 @@ namespace LuaKit {
     //				luaCoroutine = new GameObject();
     //				luaCoroutine.gameObject.name = "LuaCoroutine";
     //				luaCoroutine.AddComponent<LuaCoroutineComponent>();
-                UnityEngine.Object.DontDestroyOnLoad(luaCoroutine);
+                // UnityEngine.Object.DontDestroyOnLoad(luaCoroutine);
     //			}
 
     //			LuaCoroutine.Register(mLuaState, luaCoroutine.GetComponent<LuaCoroutineComponent>());

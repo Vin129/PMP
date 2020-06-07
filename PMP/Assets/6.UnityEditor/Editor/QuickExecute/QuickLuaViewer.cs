@@ -33,7 +33,7 @@ public class QuickLuaViewer
 		FindLuaTableInfo(filePath);
 		// 以上是初始化环节
 		var luaName = filePath.Substring(filePath.LastIndexOf("/") + 1,filePath.Length - filePath.LastIndexOf("/") - 1).Replace(".lua","");
-		GL.BeginVertical("box");
+		GL.BeginVertical("OL box");
 		GL.Label(luaName,EditorStyles.boldLabel);
 		if(mExecuteFunctionDirt.Count() < 1)
 		{
@@ -124,6 +124,11 @@ public class QuickLuaViewer
 		if(mFocusLuaTab == null)
 		{
 			Report("LuaKitError:LuaTable init fail");
+			return;
+		}
+		if(mFocusLuaTab["class"].IsNull())
+		{
+			Report("LuaKitError:LuaTable init not a class");
 			return;
 		}
 		if(mExecuteFunctionDirt == null)

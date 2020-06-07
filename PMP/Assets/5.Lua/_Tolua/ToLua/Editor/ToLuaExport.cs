@@ -292,16 +292,21 @@ public static class ToLuaExport
                 {
                     continue;
                 }
+                if(args[i] == null)
+                    continue;
 
                 if (args[i].Attributes != ParameterAttributes.Out)
                 {
                     list.Add(GetGenericBaseType(method, args[i].ParameterType));
                 }
                 else
-                {
-                    Type genericClass = typeof(LuaOut<>);
-                    Type t = genericClass.MakeGenericType(args[i].ParameterType.GetElementType());
-                    list.Add(t);
+                { 
+                    // if(args[i].ParameterType.GetElementType() != null)
+                    // {
+                        Type genericClass = typeof(LuaOut<>);
+                        Type t = genericClass.MakeGenericType(args[i].ParameterType.GetElementType());
+                        list.Add(t);
+                    // }
                 }
             }
 

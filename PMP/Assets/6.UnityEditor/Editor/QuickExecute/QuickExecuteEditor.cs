@@ -188,7 +188,7 @@ public class QuickExecuteEditor : EditorWindow {
 		var att = t.RTGetAttribute<QuickExecuteAttribute>(false);
 		if(att == null)
 			return;
-		GL.BeginVertical("box");
+		GL.BeginVertical("OL box");
 		GL.Label(t.Name,EditorStyles.boldLabel);
 		var methods  = t.GetMethods().Where((i)=>{return i.RTGetAttribute<ExecuteMethodAttribute>(false) != null;});
 		if(methods.Count() < 1)
@@ -199,7 +199,8 @@ public class QuickExecuteEditor : EditorWindow {
 		{
 			foreach (var m in methods)
 			{
-				GL.BeginHorizontal("box");
+				GL.Space(2);
+				GL.BeginHorizontal();
 				var methodName = m.Name + ":(";
 				var param = m.GetParameters();
 				for(int i = 0;i<param.Length;i++)
