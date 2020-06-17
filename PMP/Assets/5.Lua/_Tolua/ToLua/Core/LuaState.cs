@@ -111,10 +111,11 @@ namespace LuaInterface
             float time = Time.realtimeSinceStartup;
             InitTypeTraits();
             InitStackTraits();
-            L = LuaNewState();            
+            L = LuaNewState(); //luaL_newstate            
             LuaException.Init(L);
             stateMap.Add(L, this);                        
-            OpenToLuaLibs();            
+            OpenToLuaLibs();        
+                
             ToLua.OpenLibs(L);
             OpenBaseLibs();
             LuaSetTop(0);
