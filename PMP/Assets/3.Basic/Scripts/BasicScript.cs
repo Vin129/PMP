@@ -8,8 +8,8 @@ public class BasicScript : MonoBehaviour {
 	private  int[] mSortArray = {6,2,1,3,8,7,5,4,9,10,5};
 	
 	void Start () {
-		// mSortArray.SortByMerge().Log();
-		Debug.Log(2.DAR_Power(30));
+		mSortArray.ShellSort().Log();
+		// Debug.Log(2.DAR_Power(30));
 	}
 
 
@@ -65,6 +65,35 @@ public static class BaseUtil
 	}
 
 #endregion
+
+
+#region ShellSort
+	public static int[] ShellSort(this int[] A)
+	{
+		int increment = (int)(A.Length/2);  
+		while(increment>=1)
+		{
+			for(int i = 0;i<increment;i++)
+			{
+				for(int k=i+increment;k<A.Length ;k+=increment)
+				{
+					int c = k - increment;
+					int key = A[k];
+					while(c>=0&&(key < A[c]))
+					{
+						A[c + increment] = A[c];
+						c -= increment;
+					}
+					A[c + increment] = key;
+				}
+			}
+			increment/=2;
+		}
+		return A;
+	}
+
+#endregion
+
 
 
 #region MergeSort
