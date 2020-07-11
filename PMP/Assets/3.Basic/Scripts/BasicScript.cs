@@ -6,15 +6,10 @@ using UnityEngine;
 
 public class BasicScript : MonoBehaviour {
 	private  int[] mSortArray = {6,2,1,3,8,7,5,4,9,10,5};
-	
 	void Start () {
 		mSortArray.ShellSort().Log();
 		// Debug.Log(2.DAR_Power(30));
-	}
-
-
-
-	
+	}	
 }
 
 public static class BaseUtil
