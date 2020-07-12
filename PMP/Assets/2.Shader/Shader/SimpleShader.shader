@@ -31,6 +31,7 @@ Shader "Unlit/SimpleShader"
 					return UnityObjectToClipPos(t.vertex);
 				}
 
+
 				fixed4 frag():SV_TARGET
 				{
 					return fixed4(1,1,0,1);
