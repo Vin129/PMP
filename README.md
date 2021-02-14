@@ -1,12 +1,10 @@
 # PMP
 
-### 熟能生巧 业精于勤
-
-### 起风了，唯有努力生存
-
 ***
 
-> 希望明年能找一个好工作 —— 2020
+> **Practice makes perfect**
+>
+> **熟能生巧 业精于勤**
 
 ***
 
@@ -39,4 +37,12 @@
 ### 13.Reading
 
 ### 14.Optimization
+
+### **15.AddressableAssest**
+
+### 16.StudyNotes
+
+
+
+
 
