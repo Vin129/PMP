@@ -28,7 +28,6 @@
 
             struct v2f
             {
-                float temp:TEXCOORD1;
                 float depth:DEPTH;
                 float2 uv : TEXCOORD0;
                 float4 vertex : SV_POSITION;
