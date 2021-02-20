@@ -61,19 +61,19 @@ Material:
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
     - _EdgeSlider: 1
-    - _Factor: 2
+    - _Factor: 1
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
-    - _Kernal00: -1
-    - _Kernal01: -1
-    - _Kernal02: -1
-    - _Kernal10: -1
-    - _Kernal11: 10
-    - _Kernal12: -1
-    - _Kernal20: -1
-    - _Kernal21: -1
-    - _Kernal22: -1
+    - _Kernal00: 1
+    - _Kernal01: 1
+    - _Kernal02: 1
+    - _Kernal10: 1
+    - _Kernal11: -8
+    - _Kernal12: 1
+    - _Kernal20: 1
+    - _Kernal21: 1
+    - _Kernal22: 1
     - _Metallic: 0
     - _Mode: 0
     - _OcclusionStrength: 1

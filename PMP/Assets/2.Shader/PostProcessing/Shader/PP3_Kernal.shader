@@ -1,6 +1,6 @@
 ﻿Shader "PP/PP3_Kernal"
 {
-    //基于图像的边缘检测
+    //卷积能做的事情：锐化、模糊、描边
     Properties
     {
         _MainTex ("Texture", 2D) = "white" {}
@@ -31,7 +31,7 @@
             #pragma vertex vert
             #pragma fragment frag
 
-            #include "UnityCG.cginc"
+            #include "PP_Utils.cginc"
 
             struct appdata
             {
@@ -41,7 +41,7 @@
 
             struct v2f
             {
-                half2 uv[9] : TEXCOORD0;
+                float2 uv[9] : TEXCOORD0;
                 float4 vertex : SV_POSITION;
             };
 
@@ -64,24 +64,14 @@
 
             v2f vert (appdata v)
             {
-                const half2 BOX_9[9] =
-                {
-                    half2(-1,1),half2(0,1),half2(1,1),
-                    half2(-1,0),half2(0,0),half2(1,0),
-                    half2(-1,-1),half2(0,-1),half2(1,-1),
-                };
-
                 v2f o;
                 o.vertex = UnityObjectToClipPos(v.vertex);
-                for(int i = 0;i<9;i++) 
-                {
-                   o.uv[i] = v.uv + _MainTex_TexelSize.xy * BOX_9[i];
-                } 
+                VES_Get_Box9_UV(v.uv,_MainTex_TexelSize,o.uv);
                 return o;
             }
 
 
-            fixed4 Kernal(v2f i)
+            fixed4 frag (v2f i) : SV_Target
             {
                 const half K[9] = 
                 {
@@ -89,21 +79,19 @@
                     _Kernal10, _Kernal11, _Kernal12,
                     _Kernal20, _Kernal21, _Kernal22,
                 };
-                fixed4 color = (0,0,0,0);
-                for(int n = 0;n<9;n++)
-                {
-                    color += tex2D(_MainTex,i.uv[n]) * K[n];
-                }
-                return color/_Factor;
-            }
 
-            
 
-            fixed4 frag (v2f i) : SV_Target
-            {
+                float2 box25[25];
+                VES_Get_Box25_UV(i.uv[4],_MainTex_TexelSize,box25);
+
                 if(_EdgeSlider > i.uv[4].y)
                 {
-                    fixed4 col = Kernal(i);
+                    // fixed4 col = VES_Kernal(K,i.uv,_Factor,_MainTex);
+                    // fixed4 col = VES_Kernal_Blur(i.uv,_MainTex);
+
+                    // fixed4 col = VES_Kernal_GaussianBlur(box25,_MainTex);
+                    fixed4 col = VES_Kernal_UnsharpMasking(box25,_MainTex);
+
                     return col;
                 }
                 else
