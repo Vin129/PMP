@@ -109,7 +109,7 @@ half VES_Sobel(float2 boxuv[9],sampler2D _Tex)
 //Kernal
 fixed4 VES_Kernal(half _Kernal[9],float2 _Boxuv[9],float _Factor,sampler2D _Tex)
 {
-    fixed4 color = (0,0,0,0);
+    fixed4 color = fixed4(0,0,0,0);
     for(int n = 0;n<9;n++)
     {
         color += tex2D(_Tex,_Boxuv[n]) * _Kernal[n];
@@ -183,7 +183,7 @@ fixed4 VES_Kernal_GaussianBlur(float2 _Boxuv[25],sampler2D _Tex)
         1, 4, 6, 4,1,
     };
     
-    fixed4 color = (0,0,0,0);
+    fixed4 color = fixed4(0,0,0,0);
     for(int n = 0;n<25;n++)
     {
         color += tex2D(_Tex,_Boxuv[n]) * VES_GaussianBlur_Matrix[n];
@@ -203,7 +203,7 @@ fixed4 VES_Kernal_UnsharpMasking(float2 _Boxuv[25],sampler2D _Tex)
         1, 4, 6, 4,1,
     };
     
-    fixed4 color = (0,0,0,0);
+    fixed4 color = fixed4(0,0,0,0);
     for(int n = 0;n<25;n++)
     {
         color += tex2D(_Tex,_Boxuv[n]) * VES_UnsharpMasking_Matrix[n];
