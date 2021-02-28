@@ -260,6 +260,174 @@ public class LeetCodeSolution
 
 	#endregion
 
+	#region 1122
+// 给你两个数组，arr1 和 arr2，
+// arr2 中的元素各不相同
+// arr2 中的每个元素都出现在 arr1 中
+// 对 arr1 中的元素进行排序，使 arr1 中项的相对顺序和 arr2 中的相对顺序相同。未在 arr2 中出现过的元素需要按照升序放在 arr1 的末尾。
+//5 3 9 2 1
+	public int[] RelativeSortArray(int[] arr1, int[] arr2) 
+	{
+        for(int i = 0;i<arr1.Length - 1;i++)
+		{
+			var value = arr1[i+1];
+			var key = i;
+            while(key >= 0 && ComparerBoth1122(value,arr1[key],arr2))
+            {
+                arr1[key + 1] = arr1[key];
+                key--;
+            }
+			arr1[key + 1] = value;
+		}
+        return arr1;
+    }
+
+	public bool ComparerBoth1122(int a,int b ,int[] arr2)
+	{
+		var indexA = Array.IndexOf(arr2,a);
+		var indexB = Array.IndexOf(arr2,b);
+		if(indexA < 0 && indexB < 0)
+			return a < b;
+		if(indexA < 0)
+			return false;
+		if(indexB < 0)
+			return true;
+		return indexA < indexB;
+	}
+
+	#endregion
+
+	#region 1528
+// 给你一个字符串 s 和一个 长度相同 的整数数组 indices 。
+// 请你重新排列字符串 s ，其中第 i 个字符需要移动到 indices[i] 指示的位置。
+// 返回重新排列后的字符串。
+
+	public string RestoreString(string s, int[] indices) {
+		char [] temp = s.ToCharArray();
+		for(int i = 0;i<indices.Length - 1;i++)
+		{
+			var value = indices[i+1];
+			var valueStr = temp[i+1];
+			var key = i;
+			while(key >= 0 && value<indices[key])
+			{
+				indices[key + 1] = indices[key];
+				temp[key + 1] = temp[key];
+				key--;
+			}
+			indices[key+1] = value;
+			temp[key+1] = valueStr;
+		}
+		return new string(temp);
+    }
+	#endregion
+
+
+
+	#region 1502
+// 给你一个数字数组 arr 。
+// 如果一个数列中，任意相邻两项的差总等于同一个常数，那么这个数列就称为 等差数列 。
+// 如果可以重新排列数组形成等差数列，请返回 true ；否则，返回 false 。
+    public bool CanMakeArithmeticProgression(int[] arr) {
+		if(arr.Length == 2)
+			return true;
+		for(int i = 0;i<arr.Length - 1;i++)
+		{
+			for(int j = 0;j<arr.Length - 1 - i;j++)
+			{
+				if(arr[j] > arr[j+1])
+				{
+					var temp = arr[j];
+					arr[j] = arr[j+1];
+					arr[j+1] = temp;
+				}
+			}
+		}
+		var value = arr[1] - arr[2];
+		for(int i = 0;i<arr.Length - 1;i++)
+		{
+			if(arr[i] - arr[i+1] != value)
+				return false;
+		}
+		return true;
+    }
+	#endregion
+
+
+
+	
+	#region 976
+    public int LargestPerimeter(int[] A) 
+	{
+		QuickSort(ref A,0,A.Length-1);
+		for(int i = 0;i<A.Length - 2;i++)
+		{
+			if(A[i] < A[i+1] + A[i+2])
+				return A[i] + A[i+1] + A[i+2];
+		}	
+		return 0;
+    }
+
+	public void QuickSort(ref int[] A,int start,int end)
+	{
+		if(start >= end)
+			return;
+		var p = QuickSortDivide(ref A,start,end);
+		QuickSort(ref A,start,p);
+		QuickSort(ref A,p+1,end);
+	}
+	
+	public int QuickSortDivide(ref int[]A,int start,int end)
+	{
+        var value = A[start];
+
+		var j = start;
+		for(int i = start + 1;i <= end;i++)
+		{
+			if(A[i] > value)
+			{
+				j++;
+				var tempV = A[j];
+				A[j] = A[i];
+				A[i] = tempV;
+			}
+		}
+		var temp = A[start];
+		A[start] = A[j];
+		A[j] = temp;
+		return j;
+	}
+	#endregion
+
+	#region 350
+    public int[] Intersect(int[] nums1, int[] nums2) {
+		QuickSort(ref nums1,0,nums1.Length - 1);
+		QuickSort(ref nums2,0,nums2.Length - 1);
+		int i = 0;
+		int j = 0;
+		var list = new List<int>();
+		while(i < nums1.Length && j < nums2.Length)
+		{
+			if(nums1[i]==nums2[j])
+			{
+				list.Add(nums1[i]);
+				i++;
+				j++;
+			}
+			else if(nums1[i] > nums2[j])
+			{
+				i++;
+			}
+			else
+			{
+				j++;
+			}
+		}
+		return list.ToArray();
+    }
+	#endregion
+
+
 }
   public class ListNode {
       public int val;
