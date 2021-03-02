@@ -49,12 +49,14 @@ public class JustTest : MonoBehaviour
 
     // Start is called before the first frame update
     void Start()
-    { 
-       
-        ClassA a = new ClassB();
-        a.Test();
-        a.Fun();
-
+    {       
+        Print100(1);
+    }
+    //无循环无if输出1~100
+    public bool Print100(int i)
+    {
+        Debug.Log(i);
+        return (i<100)&&Print100(++i);
     }
 
     private void FixedUpdate() {
