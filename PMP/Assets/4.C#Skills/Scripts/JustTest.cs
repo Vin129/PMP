@@ -10,7 +10,16 @@ public class JustTest : MonoBehaviour
     Queue<int> d;
     Stack<int> e;
     LinkedList<int> f;
-    public abstract class ClassA
+    public class ClassBase
+    {
+        public ClassBase()
+        {
+            Debug.LogError("ClassBase");
+        }
+    }
+
+
+    public abstract class ClassA:ClassBase
     {
         public ClassA()
         {
@@ -50,7 +59,10 @@ public class JustTest : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {       
-        Print100(1);
+        ClassA a = new ClassB();
+        a.Test();
+        a.Fun();
+        // Print100(1);
     }
     //无循环无if输出1~100
     public bool Print100(int i)
