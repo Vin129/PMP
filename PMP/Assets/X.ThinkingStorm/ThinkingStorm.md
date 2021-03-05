@@ -8,6 +8,7 @@ https://github.com/XINCGer/Unity3DTraining/blob/master/Doc/%E9%A9%AC%E4%B8%89%E7
 物品：不同种类的道具的创建  创建 -> 工厂模式（创建模式）
 战力计算：装饰者模式（结构模式） 战力计算包括种类繁多（装备、技能、天赋...） 以List的形式将各个模块的战力分别交由各个组件进行计算。
 
+Assest Resource Assestbundle 区别
 
 NGUI 与 UGUI 区别
 
