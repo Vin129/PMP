@@ -16,7 +16,7 @@
 
 ## 数据结构
 
-
+1. 链表：回路、环、翻转
 
 
 
@@ -24,20 +24,38 @@
 
 ## 算法
 
-
+1. A星寻路
+2. Navmesh寻路
 
 
 
 ## 设计模式
 
 1. 状态机/行为树
+2. 观察者、监听者、代理模型
+3. MVC
 
 
 
 ## Unity
 
-1.  Assestbundle  LAMA LZ4区别
+1.  AssestBundle  LAMA LZ4区别
 2. WWW加载AB资源与其他加载方式有和不同
+3.  JIT AOT
+4.  特殊文件夹作用
+5.  GC 原理
+6.  协程与线程
+
+
+
+## C#
+
+1.  await async
+2. 协程原理
+3. 线程
+4. GC 原理
+
+
 
 
 
@@ -45,6 +63,7 @@
 
 1. ToLua、XLua、ILRunTime 各自的特点优缺
 2. XLua Hotfix 原理
+3. GC 原理
 
 
 
