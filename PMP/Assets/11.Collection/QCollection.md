@@ -45,6 +45,7 @@
 4.  特殊文件夹作用
 5.  GC 原理
 6.  协程与线程
+7.  rotation 是什么类型表达的：四元数
 
 
 
@@ -71,7 +72,7 @@
 4. Table 源码：组成{array、hash、head}
 5. 元表index、newindex
 6. string  ..如何替代：table.concat
-7. for pairs ipairs
+7. for pairs ipairs  效率问题
 
 
 
@@ -81,6 +82,12 @@
 2. ZBuff
 3. 向前渲染和延迟渲染
 4. phong/blin-phong
+
+
+
+## 数学
+
+1.  矩阵、欧拉角、四元数 分析多层次 （结构、有什么弊端致命问题、易用性？）
 
 
 
