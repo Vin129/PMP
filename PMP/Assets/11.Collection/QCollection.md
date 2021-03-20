@@ -59,6 +59,7 @@
 6.  List ArrayList 区别：ArrayList是object的，List是泛型，ArrayList会有装箱的问题
 7.  委托生成的样子：委托的构成{param,function,next}
 8.  Dictionary 源码 value存放在何处？
+9.  值类型装箱->装箱的内容有哪些？
 
 
 
