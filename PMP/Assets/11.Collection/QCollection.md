@@ -54,12 +54,14 @@
 1.  await async
 2. 协程原理
 3. 线程
-4. GC 原理，分代 如果0代满了，需要GC会这么样？会先GC0代这样
+4. GC 原理
 5.  List ArrayList Dictionary 源码
-6.  List ArrayList 区别：ArrayList是object的，List是泛型，ArrayList会有装箱的问题
+6.  List ArrayList 区别
 7.  委托生成的样子：委托的构成{param,function,next}
 8.  Dictionary 源码 value存放在何处？
 9.  值类型装箱->装箱的内容有哪些？
+10.  new 的过程？
+11.  实例化卡的原因
 
 
 
