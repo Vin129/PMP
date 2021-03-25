@@ -12,7 +12,7 @@
 3. UDP是什么，如何实现可靠的UDP
 4. Http  Get/Post
 5. Http 断点续传
-6. Protobuff 、PBC、SProto 区别
+6. Protobuff 、SProto 区别
 
 
 
@@ -80,6 +80,8 @@
 5. 元表index、newindex
 6. string  ..如何替代：table.concat
 7. for pairs ipairs  效率问题
+8. 如何避免误使用全局变量
+9. 注册C#匿名函数为什么会导致无法GC
 
 
 
