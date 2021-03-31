@@ -138,6 +138,16 @@
 6. 协程依附于线程，只是线程中的一部分，协程根本上是迭代器，通过yeild return 这种形式会形成一个可枚举类，通过StartCoroutine被加入Update刷新列表中，通过Current与MoneNext()进行状态切换，达到被挂起并在特点时刻执行的效果。
 
    线程：线程
+   
+7. rotation 是什么类型表达的：四元数
+
+8. 骨骼动画原理
+
+9. GUID：该文件的唯一ID，通过GUID就可以找到工程文件中的这个文件。AssetDatabase.GUIDToAssetPath和AssetDatabase.AssetPathToGUID
+
+   FileID(LocalID)：记录子文件的ID
+
+   通过GUID找到任一文件，通过FileID找到其中某个子文件
 
 
 
