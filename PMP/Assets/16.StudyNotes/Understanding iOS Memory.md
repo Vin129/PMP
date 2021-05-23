@@ -5,12 +5,13 @@
 >
 > The tools provided are the following:
 >
-> 	1. Unity Memory Profiler
->  	2. MemoryProfiler(on BitBucket)
->  	3. MemoryProfiler Extension(on Github)
->  	4. Xcode memory gauge in Debug Navigator view
->  	5. VM Tracker Instrument
->  	6. Allocations Instrument
+> 1. [Unity Memory Profiler](## Unity Profiler)
+>
+>  	2. [MemoryProfiler(on BitBucket)](## MemoryProfiler( on BitBucket ))
+>  	3. [MemoryProfiler Extension(on Github)](## MemoryProfiler Extension(on Github))
+>  	4. [Xcode memory gauge in Debug Navigator view](## Xcode Memory Gauge )
+>  	5. [VM Tracker Instrument](## VM Tracker Instrument)
+>  	6. [Allocations Instrument](## Allocations Instrument)
 
 
 
@@ -22,7 +23,7 @@
 
 # Kinds of Memory
 
-> When a developer asks the question “how much memory does my game use?’ usually one of these tools has a good answer. The problem, however, is that the question is ambiguous — the word “memory” can mean several different kinds of memory. So it is critical to understand what kind of memory the question is referring to. The existence of different kinds of memory is what creates a layer of confusion and deems the topic of memory on i0S too complicated to bother.
+> When a developer asks the question “how much memory does my game use?’ usually one of these tools has a good answer. The problem, however, is that the question is ambiguous — the word “memory” can mean several different kinds of memory. So it is critical to understand what kind of memory the question is referring to. The existence of different kinds of memory is what creates a layer of confusion and deems the topic of memory on iOS too complicated to bother.
 > This document describes the nature of memory in iOS and goes into details of what data the mentioned tools provide. The information provided is applicable to other platforms, but differences in implementation are not discussed here.
 
 当开发人员问“我的游戏使用了多少内存？”时，通常其中一种工具会提供很好的答案。但是这个问题是模糊不清的，对于**“内存”**可能意味着几种不同类型的内存。因此，了解该问题指的是哪种内存至关重要。各种内存的存在造成了一片混乱，并认为IOS中关于内存的话题过于复杂。
@@ -121,3 +122,138 @@ Malloc Heap是一个虚拟内存区域，应用程序可以使用malloc和calloc
 
 如果一个应用程序访问一个当前不在物理内存中的内存页上的地址，就会发生一个页故障。当这种情况发生时，虚拟内存系统会调用一个特殊的页面故障处理程序来立即响应这个故障。页面故障处理程序停止当前执行的代码，找到物理内存的一个空闲页面，从备份存储中加载包含所需数据的页面，更新页面表，然后将控制权返回给程序的代码。
 
+### Clean Memory
+
+> Clean Memory is a set of read-only memory pages from applications Resident Memory which iOS can safely remove and reload from disk when needed. Memory allocated for the following data is considered Clean:
+> 1. System frameworks,
+> 2. Application’s binary executable,
+> 3. Memory mapped files.
+
+Clean Memory是一组来自应用程序常驻内存的只读内存页，iOS可以在需要时安全地移除并从磁盘重新加载。以下数据分配的内存被认为是干净的。
+
+1. 系统框架。
+
+2. 应用程序的二进制可执行文件。
+
+3. 内存映射的文件。
+
+> When an application links to a framework, Clean Memory set will increase by the size of the framework binary. But most of the time, only a part of the binary is loaded in Physical Memory.
+> Because Clean Memory is read-only, applications can share parts of Clean Memory like common frameworks and libraries, as well as other read-only or copy-on-write pages.
+
+当一个应用程序链接到一个框架时，Clean Memory将会随着框架二进制文件的大小而增加。但是大多数时候，只有二进制文件的一部分被加载到物理内存中。
+
+因为Clean Memory是只读的，所以应用程序可以共享Clean Memory的部分内容，比如通用框架和库，以及其他只读或写入时拷贝（[copy-on-write](https://en.wikipedia.org/wiki/Copy-on-write)）的页面。
+
+### Dirty Memory
+
+> Dirty Memory is a part of Resident Memory which can't be removed by the OS.
+
+脏内存是常驻内存的一部分，不能被操作系统删除。
+
+### Swapped Compressed Memory
+
+> Swapped (Compressed) Memory is a part of Dirty Memory which the OS deemed rarely used and stores in a compressed memory region.
+> The algorithm used to move and compress these memory blocks is not open, but tests show that iOS usually aggressively tries to do this, thus reducing the amount of Dirty Memory for the application.
+
+Swapped Compressed Memory是Dirty Memory的一部分，操作系统认为它很少被使用，并存储在一个压缩的内存区域。
+
+用于移动和压缩这些内存块的算法并没有公开，但测试表明，iOS通常会积极地尝试这样做，从而减少应用程序的Dirty Memory的数量
+
+
+
+## Unity Memory
+
+> Unity is a C++ game engine with a .NET scripting Virtual Machine. Unity allocates memory for native (C++) objects and memory needed for the Virtual Machine from Virtual Memory. Also, third-party plugins can do their allocations from the Virtual Memory pool.
+
+Unity是一个带有.NET脚本虚拟机的C++游戏引擎。Unity从虚拟内存中为Native（C++）对象分配内存和虚拟机所需的内存。另外，第三方插件可以从虚拟内存池中进行分配。
+
+### Native Memory
+
+> Native Memory is the part of the game's Virtual Memory which is used for native (C++) allocations — here Unity allocates pages for all its needs, including Mono Heap.
+>
+> Internally Unity has several specialized allocators which manage Virtual Memory allocations for short-term and long-term needs. All the assets in the game are stored in Native Memory, while being exposed as lightweight wrappers for the .NET Virtual Machine. In other words, when a Texture2D object is created in C# code, the biggest part of it, actual texture data, is allocated in Native Memory, not in the Mono Heap (though most of the time it is uploaded “on GPU” and discarded).
+
+Native Memory是游戏虚拟内存的一部分，用于native（C++）的内存分配。在这Unity为其所有需要的分配页，包括Mono Heap。
+
+在内部，Unity有几个专门的分配器来管理虚拟内存的分配，以满足短期和长期的需要。游戏中的所有资产都存储在Native Memory中，同时作为.NET虚拟机的轻量级包装物被暴露出来。换句话说，当一个Texture2D对象在C#代码中被创建时，它的最大部分，即实际的纹理数据，被分配在Native Memory中，而不是Mono Heap中（尽管大多数时候它被上传 "在GPU上 "并被丢弃）。
+
+### Mono Heap
+
+>  Mono Heap is a part of Native Memory allocated for the needs of the NET Virtual Machine. It contains all the managed C# allocations and is maintained by the Garbage Collector.
+>
+> Mono Heap is allocated in blocks which store managed objects of similar size. Each block can store some amount of such objects and if it stays empty for several GC passes (8 passes in the time of writing on iOS) the block is decommitted from memory (i.e, its Physical Memory is returned to the system). But Virtual Memory address space allocated by the GC is never freed and can't be used by any other allocator in the game.
+>
+> The issue with the blocks is that they are usually fragmented and might contain just a few objects out of a capacity of thousands. Such blocks are still considered used, so their Physical Memory can't be returned to the system. Unfortunately, this is usually the case in real-world scenarios, while it is easy to construct an artificial example where Mono Heap Resident Memory will grow and shrink at will.
+
+Mono Heap是Native Memory的一部分，为NET虚拟机的需要而分配。它包含所有管理的C#分配，并由垃圾收集器维护。
+
+Mono Heap是以块的形式分配的，它存储类似大小的管理对象。每个区块可以存储一定数量的对象，如果它在几次GC pass 中一直是空的（在iOS上写的时候是8个pass），那么这个区块就会从内存中被去除（也就是说，它的物理内存被退回给系统）。但是GC分配的虚拟内存地址空间永远不会被释放，也不能被游戏中的任何其他分配器使用。
+
+内存块的问题是，它们通常是零散的，可能只包含数千个容量中的几个对象。这样的内存块仍然被认为是使用过的，所以它们的物理内存不能归还到系统中。不幸的是，这通常是现实世界中的情况，而很容易构建一个人为的例子，Mono Heap常驻内存会随意增长和缩小。
+
+
+
+# iOS Memory Management
+
+> iOS is a multitasking operating system; it allows applications coexist in the same environment, Each application with its own Virtual Memory address space mapped to some portion of Physical Memory. When the amount of free Physical Memory gets low (either because too many applications are loaded, or the foreground application consumes too much Physical Memory), iOS starts trying to reduce memory pressure. 
+>
+> 1. First, iOS tries to remove some Clean Memory pages, 
+> 2. If it deems an application to take too much Dirty Memory, iOS sends a memory warning to the application, expecting it to free some resources, 
+> 3. After several memory warnings, if the application still uses a significant amount of Dirty Memory, iOS terminates the application.
+
+iOS是一个多任务操作系统；它允许应用程序在同一环境中共存，每个应用程序都有自己的虚拟内存地址空间，并映射到物理内存的某些部分。当空闲的物理内存数量变少时（要么是因为加载了太多的应用程序，要么是前台应用程序消耗了太多的物理内存），iOS开始尝试减少内存压力。
+
+1. 首先，iOS试图删除一些Clean Memory页
+2. 如果它认为一个应用程序占用了太多的脏内存，iOS会向该应用程序发送一个内存警告，希望它释放一些资源
+3. 经过几次内存警告后，如果该应用程序仍然使用大量的脏内存，iOS会终止该应用程序。
+
+> Unfortunately, the decision process to kill an application is not transparent. It seems that. this decision depends on total memory pressure, the internal state of kernel memory manager and how many strategies the OS has already tried to minimize the pressure. Only when it exhausts all the strategies, it decides to kill currently active application. That's why sometimes an application can be stopped quite early, while next time it allocates 30% more and still survives.
+
+不幸的是，杀死一个应用程序的决定过程并不透明。这个决定似乎取决于总的内存压力、内核内存管理器的内部状态以及操作系统已经尝试了多少种策略来减少压力。只有当它用尽所有的策略时，它才会决定杀死当前的活动程序。这就是为什么有时一个应用程序可以很早就被停止，而下一次它又分配了30%的内存，仍然可以存活。
+
+> The most important metric to observe trying to investigate OOM crashes is Dirty Memory, because iOS is unable to remove dirty pages to provide free pages for new allocations. This means that to fix memory related issues, a developer must do the following: 
+>
+> 1. Find out how much Dirty Memory the game uses and if the usage grows over time. 
+> 2. Figure out what objects contribute to the game's Dirty Memory and can't be compressed.
+
+**试图调查内存不足的崩溃（OOM Crash）时，最重要的观察指标是Dirty Memory**，因为iOS无法删除脏页来为新分配提供空闲页。这意味着，要修复与内存有关的问题，开发者必须做以下工作。
+
+1. 找出游戏使用了多少Dirty Memory，以及使用量是否随时间增长。
+2. 弄清楚哪些对象对游戏的脏内存有贡献，不能被压缩。
+
+> Reasonably safe limit values of Dirty Memory for different iOS devices (from what we have seen in the wild):
+> * 180Mb for 512Mb devices,
+> * 360Mb for 1Gb devices
+> * 1.2Gb for 2Gb devices. 
+>
+> Note that even if your application falls under these recommended limits, eviction from iOS is still possible. Going beyond this further increases the chance of eviction on iOS.
+
+不同的iOS设备的Dirty Memory的合理安全极限值（从我们自然场景中看到的情况来看）。
+
+请注意，即使你的应用程序低于这些建议的限制，仍然有可能被iOS干掉。超出这个范围会进一步增加在iOS上被干掉的机率。
+
+
+
+# The Tools
+
+## Unity Profiler
+
+
+
+## MemoryProfiler(on BitBucket)
+
+
+
+## MemoryProfiler Extension(on Github)
+
+
+
+## Xcode Memory Gauge 
+
+
+
+## VM Tracker Instrument
+
+
+
+## Allocations Instrument
