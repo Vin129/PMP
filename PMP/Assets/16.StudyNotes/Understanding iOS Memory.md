@@ -81,7 +81,7 @@ Malloc Heap是一个虚拟内存区域，应用程序可以使用malloc和calloc
 
 苹果公司并没有公布Malloc Heap的最大尺寸。理论上，虚拟内存地址空间只受指针大小的限制，而指针大小是由处理器架构定义的，即在32位处理器上大约有4千兆字节的逻辑内存空间，在64位处理器上大约有18兆字节。但实际上，实际限制似乎取决于设备和iOS版本，比人们想象的要低得多。一个持续分配虚拟内存的简单应用给出了以下数值。
 
-![](\Textures\UIOSMemory1.png)
+![](.\Textures\UIOSMemory1.png)
 
 
 
@@ -237,6 +237,102 @@ iOS是一个多任务操作系统；它允许应用程序在同一环境中共�
 # The Tools
 
 ## Unity Profiler
+
+> The Profiler ships with Unity editor and can be used to profile various aspects of the game either in the editor or connected to a device running a Development Build of the game. Memory tab of the Profiler window shows many aggregated statistics about the game's memory usage.
+
+Unity编辑器附带的Profiler，可以在编辑器中或连接到运行游戏开发版本的设备上用于分析游戏的各个方面。Profiler窗口的Memory标签显示了许多关于游戏内存使用情况的综合统计。
+
+### Best Used For
+
+> The Profiler shows the actual named assets occupying Virtual Memory and the number of references to them in the game. It is the most accessible tool to inspect what assets are in memory and why they are there. Other tools show a lot more details about allocations and the code doing these allocations, but it is tough to find out what exactly was allocated and why it is still in memory.
+>
+> The Profiler also shows the actual size of Mono Heap.
+
+Profiler显示了占用虚拟内存的实际命名的资产和游戏中对它们的引用数量。它是检查哪些资产在内存中以及它们为什么在那里的最方便的工具。其他工具显示了更多关于分配和进行这些分配的代码的细节，但要找出到底分配了什么以及为什么它一直存在在内存中是很困难的。
+
+Profiler也显示了MonoHeap的实际大小。
+
+
+
+### SimpleView
+
+![](./Textures/UIOSMemory2.png)
+
+> Unity reserves memory pools for allocations in Native Memory to avoid asking the OS too often — this is displayed as “Reserved.” The amount of Reserved memory actually used by Unity is displayed as “Used.”
+>
+> The “Simple” view displays the amount of Virtual Memory allocated for the following (provided for iOS/Metal, might be different on other platforms): 
+
+Unity为Native Memory的分配保留了内存池，以避免经常询问操作系统 - 这显示为 "Reserved"。Unity实际使用的保留内存的大小显示为 "Used"。
+
+"SimpleView "视图显示分配给以下的虚拟内存的数量(图片提供的为iOS/Metal，在其他平台上可能不同):
+
+- **GfxDriver** — the total size of textures excluding render targets (doesn't include many other driver allocations)
+
+  纹理的总大小，不包括渲染目标（不包括许多其他驱动分配）。
+
+- **FMOD** — the overall size of memory requested by FMOD for audio playback
+
+  FMOD为音频播放所要求的内存的总大小
+
+- **Profiler** — Profiler overhead
+
+  分析器的开销
+
+- **Video** — the memory used for playing video files
+
+  用于播放视频文件的内存
+
+- **Mono**
+
+  - **Reserved** — the total Resident Memory size of used and unused memory blocks of Mono Heap
+
+    已使用和未使用的Mono Heap内存块的总常驻内存大小
+
+  - **Used** — the total Resident Memory size of used memory blocks (i.e. the current size of Mono Heap)
+
+    已使用的总常驻内存大小（即Mono Heap的当前大小）。
+
+  - **Note**: the actual size of managed objects is less than Used size and is not shown here
+
+    被管理对象的实际尺寸小于使用的尺寸，在此不作显示。
+
+- **Unity** — all reserved and used memory managed by Unity allocators minus Profiler、Video and FMOD (i.e, including Mono Heap)
+
+  由Unity分配器管理的所有保留和使用的内存，减去Profiler、Video和FMOD（即，包含Mono Heap）。
+
+- **Total** — Unity + GfxDriver + Profiler (not including Video and FMOD for some reason)
+
+  Unity + GfxDriver + Profiler (由于某些原因不包含Video和FMOD)
+
+  
+
+
+
+> The Total Reserved memory is by no means the accurate value of Virtual Memory allocated by the game: 
+>
+> 1. This data doesn't include the size of the game's binary executables, loaded libraries, and frameworks.
+> 2. GfxDriver value doesn't include render targets and various buffers allocated by the driver. 
+> 3. The Profiler only sees allocations done by Unity code; it doesn't see allocations by third-party native plugins and by the OS.
+
+Total Reserved memory 并不意味着准确的游戏分配的虚拟内存值。
+
+​	1. 这个数据不包括游戏的二进制二进制文件，加载的库和框架的大小。
+
+​	2. GfxDriver的值不包括渲染目标和由驱动分配的各种残留。
+
+​	3. 分析器只看到Unity代码维护的分配，它无法看到第三方本地插件和操作系统的分配。
+
+
+
+### Detailed View
+
+![](./Textures/UIOSMemory3.png)
+
+
+
+
+
+
 
 
 
