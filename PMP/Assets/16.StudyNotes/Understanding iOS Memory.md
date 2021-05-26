@@ -328,15 +328,79 @@ Total Reserved memory 并不意味着准确的游戏分配的虚拟内存值。
 
 ![](./Textures/UIOSMemory3.png)
 
+> The “Detailed” view displays the Virtual Memory allocated by different objects in the engine. It is handy for finding out the actual sizes of the game's assets and whether whether something uses these assets or not.
+
+详细的视窗显示了引擎不同对象分配的虚拟内存。这对与了解游戏资产的实际大小以及某物体是否使用这些资产是很方便的。
+
+- **Assets** — currently loaded assets from scenes, Resources or Asset Bundles
+
+  当前从场景、资源、AB中加载的资产
+
+- **Built-in Resources** — Unity Editor resources or Unity default resources
+
+  Unity 编辑器资源和Unity默认资源
+
+- **Not Saved** — GameObjects marked as DontSave
+
+  被标记为“不保存”的GameObjects
+
+- **Scene Memory** — GameObject and attached components
+
+  GameObject和其附带的组件
+
+- **Other** — objects not assigned in the above categories
+
+  不属于上述类别的对象
+
+通常情况下，最有趣的数据可以在资产部分找到。
+
+![](./Textures/UIOSMemory4.png)
+
+例如，这里可以看出，声音压缩设置是错误的，这些音频片段占用了太多的内存。
 
 
 
+![](./Textures/UIOSMemory5.png)
+
+在这个视图中，也很容易发现名称相同的重复纹理。并非所有具有相同名称的纹理都是重复的，但通常检查一下是个好主意。
+
+Not Saved和Scene Memory部分可能包含动态创建的资产，这些资产没有被GC。泄漏的资产可以通过Ref count列中没有数值来识别，这意味着没有其他资产或代码在引用它。
+
+
+
+![](./Textures/UIOSMemory6.png)
+
+The most significant contributors to the memory pool in Other section are actually misleading
+
+Other 中对内存池占用最多部分实际上是误导。
+
+- **Objects** — objects are various classes that derive from NamedObject, i.e. GameObjects, Textures, Meshes, Components, etc. This value should be the sum of objects from other sections, but it seems that it got broken at some point and is not relevant anymore, In any case, this is not “some other objects on top of already allocated memory” and can be ignored.
+
+  对象是派生自NamedObject的各种类，即GameObjects, Textures, Meshes, Components, 等等。这个值应该是其他部分的对象的总和，但似乎它在某个时候被破坏了，不再有意义了，在任何情况下，这不是 "已经分配的内存上的一些其他对象"，可以忽略。
+
+- **System.ExecutableAndDlls** — Unity tries to guess the memory consumed by loaded binary code by summing up file sizes. <...>
+
+  Unity试图通过总结文件大小来猜测加载的二进制代码所消耗的内存。
+
+- **ShaderLab** — these are all allocations related to compiling shaders. Shaders themselves have their own object root and are listed under Shaders.
+
+  这些都是与编译着色器有关的分配。Shaders本身有自己的对象根，并被列在Shaders下。
 
 
 
 
 
 ## MemoryProfiler(on BitBucket)
+
+> This is an experimental tool based on Memory API introduced in Unity 5.3. When connected to a game built with IL2CPP, it can graph memory regions Unity knows about. The tool is available on BitBucket and is not shipped with Unity.
+
+这是一个基于Unity 5.3中引入的Memory API的实验性工具。当连接到用IL2CPP构建的游戏时，它可以绘制Unity所知道的内存区域。该工具可在BitBucket上使用，但不随Unity一起提供。
+
+
+
+
+
+
 
 
 
