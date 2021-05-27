@@ -5,13 +5,13 @@
 >
 > The tools provided are the following:
 >
-> 1. [Unity Memory Profiler](## Unity Profiler)
+> 1. [Unity Memory Profiler](# Unity Profiler)
 >
->  	2. [MemoryProfiler(on BitBucket)](## MemoryProfiler( on BitBucket ))
->  	3. [MemoryProfiler Extension(on Github)](## MemoryProfiler Extension(on Github))
->  	4. [Xcode memory gauge in Debug Navigator view](## Xcode Memory Gauge )
->  	5. [VM Tracker Instrument](## VM Tracker Instrument)
->  	6. [Allocations Instrument](## Allocations Instrument)
+>  	2. [MemoryProfiler(on BitBucket)](# MemoryProfiler( on BitBucket ))
+>  	3. [MemoryProfiler Extension(on Github)](# MemoryProfiler Extension(on Github))
+>  	4. [Xcode memory gauge in Debug Navigator view](# Xcode Memory Gauge )
+>  	5. [VM Tracker Instrument](# VM Tracker Instrument)
+>  	6. [Allocations Instrument](# Allocations Instrument)
 
 
 
@@ -395,6 +395,8 @@ Other 中对内存池占用最多部分实际上是误导。
 > This is an experimental tool based on Memory API introduced in Unity 5.3. When connected to a game built with IL2CPP, it can graph memory regions Unity knows about. The tool is available on BitBucket and is not shipped with Unity.
 
 这是一个基于Unity 5.3中引入的Memory API的实验性工具。当连接到用IL2CPP构建的游戏时，它可以绘制Unity所知道的内存区域。该工具可在BitBucket上使用，但不随Unity一起提供。
+
+
 
 
 
