@@ -396,26 +396,229 @@ Other 中对内存池占用最多部分实际上是误导。
 
 这是一个基于Unity 5.3中引入的Memory API的实验性工具。当连接到用IL2CPP构建的游戏时，它可以绘制Unity所知道的内存区域。该工具可在BitBucket上使用，但不随Unity一起提供。
 
+![](./Textures/UIOSMemory7.png)
 
+这个工具通过以下方式增加了Profiler的数据：
 
+1. Proportionally drawing the size of allocations 
 
+   按比例画出分配的大小
 
+2. Saying why these allocations are still in memory (who references them)
 
+   说明为什么这些分配还在内存中（谁引用了它们）
 
+3. It shows managed objects.
 
+   它显示了管理对象。
+
+   
+
+例如，这是一个由该工具显示的字符串阵列：
+
+![](./Textures/UIOSMemory8.png)
+
+### Best Used For
+
+> MemoryProfiler is a great tool to visually map Native Memory and find groups of managed objects which occupy too much of it.
+
+MemoryProfiler是一个很好的工具，可以直观地映射Native Memory，并找到占用过多内存的管理对象组。
 
 
 
 ## MemoryProfiler Extension(on Github)
 
+> Using the same memory API the previous tool utilizes, Unity Support Team has prototyped an extended tool which can visualize Mono Heap. It is available on Github.
+
+使用之前的工具所使用的相同的内存API，Unity支持团队已经制作了一个扩展工具的原型，可以将Mono Heap可视化。[Github](https://github.com/robertoardila/support-unity-memoryprofiler)
+
+![](./Textures/UIOSMemory9.png)
+
+### Best Used For
+
+> This tool nicely displays the structure of Mono Heap and is a great instrument to learn how memory for the heap is allocated and used.
+
+这个工具很好地显示了Mono Heap的结构，是学习堆的内存如何分配和使用的一个好工具。
+
 
 
 ## Xcode Memory Gauge 
+
+> When running an application from Xcode, the IDE shows a few gauges in Debug Navigator View, one of which displays a number corresponding to currently used memory.
+
+当从Xcode中运行一个应用程序时，IDE在Debug Navigator View中显示一些仪表，其中一个显示对应于当前使用的内存的数字。
+
+![](./Textures/UIOSMemory10.png)
+
+> Unfortunately, it is not entirely known what this bar shows. The maximum value is the total size of Physical Memory. The value seems to be 10-15MB larger than Dirty Memory + Swapped Memory reported by VM Tracker Instrument discussed further. It seems that when the value gets into the yellow zone, the application is soon terminated by the OS.
+
+不幸的是，目前还不完全知道这个条形图显示的是什么。最大值是物理内存的总大小。该值似乎比VM Tracker Instrument报告的Dirty Memory + Swapped Memory大10-15MB，并进一步讨论。似乎当这个值进入黄色区域时，应用程序很快就被操作系统终止了。
+
+> It is wrong to say that this single number is the only one used to decide when to terminate an application. As mentioned in “iOS Memory Management” section, the actual process is not that straightforward.
+
+如果说这个单一的数字是决定何时终止应用程序的唯一数字，那是错误的。正如在 "**iOS Memory Management** "一节中提到的，实际的过程并不是那么简单的。
+
+### Best Used For
+
+> The value displayed by this gauge is rather a heuristic to see if the application is doing OK memory wise or not. It should be used only to observe the overall trend of the application memory consumption. For precise profiling, developers are advised to use Instruments,
+
+这个仪表显示的值是一个参考，可以看到应用程序在内存方面是否做得不错。它应该只被用来观察应用程序内存消耗的总体趋势。对于精确的分析，我们建议开发者使用 **Instrument**。
 
 
 
 ## VM Tracker Instrument
 
+> The VM Tracker instrument captures information about Virtual Memory usage by a process. It shows all memory blocks in the application's address space labeled with the block type and which library reserved it. For each reserved memory block, the tool displays its size in Virtual Memory, as well as how much Resident, Dirty and Swapped Memory the block takes.
+
+VM Tracker Instrument捕获关于进程的虚拟内存使用的信息。它显示了应用程序地址空间中的所有内存块，并标明了块的类型和哪个库保留了它。对于每个保留的内存块，该工具显示其在虚拟内存中的大小，以及该内存块占用多少常驻内存、脏内存和交换内存。
+
+### Best Used For
+
+> VM Tracker gives the most detailed information about the state of a process’ memory and is the only tool which reports the size of its Dirty Memory set. Other interesting details include the size of graphics driver allocations (essentially the Video Memory), the size of application binaries in memory and the total volume of reserved and committed Mono Heap.
+> Unfortunately, the tool doesn't report what the memory is allocated for and when. For this purpose, we advise using Allocations Instrument and Unity Profiler.
+
+VM Tracker提供了关于进程内存状态的最详细的信息，并且是唯一能报告其Dirty Memory集大小的工具。其他有趣的细节包括图形驱动分配的大小（基本上是视频内存），内存中应用程序二进制文件的大小以及保留和提交的Mono Heap的总量。
+
+不幸的是，该工具并没有报告内存被分配的目的和时间。为了这个目的，我们建议使用Allocations Instrument和Unity Profiler。
+
+### Starting a Profiling Session
+
+> To profile a game with Instruments, it must either be launched from a specific Instrument or the Instrument must be connected while the game is launched. To start profiling from Xcode, the game must be launched using Profile button, and the Allocations instrument must be chosen.
+
+要用工具对游戏进行剖析，必须从一个特定的工具启动，或者在游戏启动的同时连接工具。要从Xcode开始分析，必须使用Profile按钮启动游戏，并且必须选择Allocations仪器。
+
+![](./Textures/UIOSMemory11.png)
+
+之后，启动游戏按记录按钮
+
+![](./Textures/UIOSMemory12.png)
+
+游戏开始后，在时间轴上选择VM Tracker行，手动按下 "立即快照 "按钮或勾选 "Snapshot Now"在特定时间间隔内进行。
+
+![](./Textures/UIOSMemory12_1.png)
+
+### Data
+
+快照结束后，工具会展示的数据如下：
+
+![](./Textures/UIOSMemory13.png)
+
+- **Type** — the name of the memory being used
+
+  内存类型
+
+- **Resident Size** — the amount of Resident Memory being used by allocation or a group of allocations
+
+  分配或一组分配所使用的常驻内存大小。
+
+- **Dirty Size** — the amount of Dirty Memory used by allocation or a group of allocations
+
+  被分配或一组分配所使用的Dirty Memory大小
+
+- **Swapped Size** — the amount of Compressed Swapped Memory used by allocation or a group of allocations
+
+  被分配或一组分配使用的压缩交换内存大小。
+
+- **Virtual Size** — the total size of Virtual Memory used by allocation or a group of allocations
+
+  分配或一组分配所使用的虚拟内存的总大小。
+
+- **Res. %** — the percentage of Resident Memory compared to the amount of allocated Virtual Memory.
+
+  常驻内存与分配的虚拟内存数量的百分比。
+
+  
+
+VM Tracker显示每个类型的分配组以及它们对脏内存和虚拟内存的使用程度。最常见的组是：
+
+- **All** — all allocations
+
+  所有的分配
+
+- **Dirty** — a group of all types which contribute to Dirty Memory
+
+  一组所有类型的分配对脏内存的使用
+
+- **IOKit** — graphics driver memory, i.e, render targets, textures, meshes, compiled shaders, etc
+
+  图形驱动内存，即渲染目标、纹理、网格、编译的着色器等
+
+- **VM_ALLOCATE** — mainly allocations for Mono Heap. If this value is large, it is easier to use Unity Profiler to find what managed code is responsible for these allocations
+
+  主要为Mono Heap的分配。如果这个值很大，那么使用Unity Profiler来找到这些分配是由哪些托管代码负责的
+
+- **MALLOC _*** — mainly Unity native allocations or allocations by third-party plugins
+
+  主要是Unity native 分配或由第三方插件分配
+
+- **_TEXT** — non-writable executable code and static data
+
+  不可写的可执行代码和静态数据
+
+- **_DATA** — writable executable code/data
+
+  可写的可执行代码/数据
+
+- **_LINKEDIT** — raw data used by the dynamic linker, such as symbol, string, and relocation table entries.
+
+  动态链接器使用的原始数据，如符号、字符串和重定位表条目。
+
+通过查看组以及它们对虚拟内存和脏内存的使用有多大，很容易开始确定过度内存消耗的来源。
+
+### Regions Map
+
+VM Tracker 有第二个视图，叫做**Regions Map**。这是一个内存区域的列表，包含每个区域的一些信息。通过查看这个视图，可以很容易地看到虚拟内存地址空间对一个进程的结构。
+
+![](./Textures/UIOSMemory14.png)
+
+同样清楚的是，例如，Mono Heap块在内存中是不连续的。
+
+
+
 
 
 ## Allocations Instrument
+
+> Allocations Instrument shows individual allocations in the application's address space done by any native code on all threads including Unity native code, Garbage Collector, IL2CPP Virtual Machine, third-party plugins. The tool displays allocations for a selected time frame in a list or in the application's call stack. It is handy to see which code an allocation originated from.
+
+Allocations Instrument显示应用程序地址空间中由所有线程上的任何本地代码完成的单个分配，包括Unity本地代码、垃圾收集器、IL2CPP虚拟机、第三方插件。该工具在列表中或应用程序的调用堆栈中显示选定时间段的分配。它可以很方便地看到分配是来自于哪个代码。
+
+### Best Used For
+
+> Allocations Instrument is very useful for reviewing native allocations at any point in the application's lifecycle. It shows what code made the allocation, from which sometimes it is possible to infer what was allocated and why.
+
+Allocations Instrument对于审查应用程序生命周期中任何时候的本地分配是非常有用的。它显示了哪些代码进行了分配，有时可以从中推断出分配的内容和原因。
+
+### Starting a Profiling Session
+
+该仪器与VM Tracker耦合在一起，所以启动程序是一样的。要查看仪器收集的数据，在时间线视图中选择其行，并在该行上选择一个时间段（通过点击和拖动）。
+
+建议设置如下：
+
+![](./Textures/UIOSMemory15.png)
+
+### Data
+
+工具中最有用的视图是调用树视图。它显示应用程序每个线程的调用栈，以及每个分支总共分配了多少内存。
+
+![](./Textures/UIOSMemory16.png)
+
+这里是源于`UnityEvent.Invoke`的部分游戏代码。Invoke的部分代码。很明显，这段代码创建了一个`Pooler`类的实例，它克隆了一些prefabs，从而为其副本分配了内存。
+
+
+
+所有为.NET虚拟机的需要而分配的虚拟内存都可以在以下类别中找到。
+
+![](./Textures/UIOSMemory17.png)
+
+点击类别可以看到所有单个的信息。
+
+![](./Textures/UIOSMemory18.png)
+
+该工具方便地显示了所选分配的代码来源。在这种情况下，前四个分配是在初始化IL2CPP运行时完成的。
+
+![](./Textures/UIOSMemory19.png)
+
+但最后一次分配是在试图初始化一个受管对象时进行的。
+
+![](./Textures/UIOSMemory20.png)
