@@ -56,9 +56,9 @@
 > In earlier versions of iOS, the size of a page is 4 kilobytes. In later versions of iOS, A7- and A8-based systems expose 16-kilobyte pages to the 64-bit userspace backed by 4-kilobyte physical pages, while A9 systems expose 16-kilobyte pages backed by 16-kilobyte physical pages.
 > Virtual Memory consists of several regions, including code segments, dynamic libraries, GPU driver memory, malloc heap and others.
 
-在早期版本的iOS中，一个页面的大小是4千字节。在后来的iOS版本中，基于A7和A8的系统向64位用户空间暴露了16千字节的页面，由4千字节的物理页面支持，而A9系统暴露了16千字节的页面，由16千字节的物理页面支持。
+在早期版本的iOS中，一个页的大小是4kb。在后来的iOS版本中，基于A7和A8的系统向64位用户空间提供了16kb的页，由4kb的物理页面支持，而A9系统提供了16kb的页，由16kb的物理页面支持。
 
-虚拟内存由几个区域组成，包括代码段、动态库、GPU驱动内存、malloc堆和其他。
+虚拟内存由几个部分组成，包括代码段、动态库、GPU驱动内存、malloc堆和其他。
 
 ### GPU Driver Memory
 
@@ -79,7 +79,7 @@ Malloc Heap是一个虚拟内存区域，应用程序可以使用malloc和calloc
 
 换句话说，这是一块可供应用程序分配内存的虚拟地址空间。
 
-苹果公司并没有公布Malloc Heap的最大尺寸。理论上，虚拟内存地址空间只受指针大小的限制，而指针大小是由处理器架构定义的，即在32位处理器上大约有4千兆字节的逻辑内存空间，在64位处理器上大约有18兆字节。但实际上，实际限制似乎取决于设备和iOS版本，比人们想象的要低得多。一个持续分配虚拟内存的简单应用给出了以下数值。
+苹果公司并没有公布Malloc Heap的最大尺寸。理论上，虚拟内存地址空间只受指针大小的限制，而指针大小是由处理器架构定义的，即在32位处理器上大约有4GB的逻辑内存空间，在64位处理器上大约有18GB。但实际上，实际限制似乎取决于设备和iOS版本，比人们想象的要低得多。一个持续分配虚拟内存的简单应用给出了以下数值。
 
 ![](.\Textures\UIOSMemory1.png)
 
@@ -175,19 +175,19 @@ Unity是一个带有.NET脚本虚拟机的C++游戏引擎。Unity从虚拟内存
 
 Native Memory是游戏虚拟内存的一部分，用于native（C++）的内存分配。在这Unity为其所有需要的分配页，包括Mono Heap。
 
-在内部，Unity有几个专门的分配器来管理虚拟内存的分配，以满足短期和长期的需要。游戏中的所有资产都存储在Native Memory中，同时作为.NET虚拟机的轻量级包装物被暴露出来。换句话说，当一个Texture2D对象在C#代码中被创建时，它的最大部分，即实际的纹理数据，被分配在Native Memory中，而不是Mono Heap中（尽管大多数时候它被上传 "在GPU上 "并被丢弃）。
+在内部，Unity有几个专门的分配器来管理虚拟内存的分配，以满足短期和长期的需要。游戏中的所有资产都存储在Native Memory中，同时作为.NET虚拟机的轻量级包装物被暴露出来。换句话说，当一个Texture2D对象在C#代码中被创建时，它的最大部分，即实际的纹理数据，被分配在Native Memory中，而不是Mono Heap中（尽管大多数时候它被上传 "在GPU上 "并被废弃）。
 
 ### Mono Heap
 
->  Mono Heap is a part of Native Memory allocated for the needs of the NET Virtual Machine. It contains all the managed C# allocations and is maintained by the Garbage Collector.
+>  Mono Heap is a part of Native Memory allocated for the needs of the .NET Virtual Machine. It contains all the managed C# allocations and is maintained by the Garbage Collector.
 >
 > Mono Heap is allocated in blocks which store managed objects of similar size. Each block can store some amount of such objects and if it stays empty for several GC passes (8 passes in the time of writing on iOS) the block is decommitted from memory (i.e, its Physical Memory is returned to the system). But Virtual Memory address space allocated by the GC is never freed and can't be used by any other allocator in the game.
 >
 > The issue with the blocks is that they are usually fragmented and might contain just a few objects out of a capacity of thousands. Such blocks are still considered used, so their Physical Memory can't be returned to the system. Unfortunately, this is usually the case in real-world scenarios, while it is easy to construct an artificial example where Mono Heap Resident Memory will grow and shrink at will.
 
-Mono Heap是Native Memory的一部分，为NET虚拟机的需要而分配。它包含所有管理的C#分配，并由垃圾收集器维护。
+Mono Heap是Native Memory的一部分，为.NET虚拟机的需要而分配。它包含所有管理的C#分配，并由垃圾收集器维护。
 
-Mono Heap是以块的形式分配的，它存储类似大小的管理对象。每个区块可以存储一定数量的对象，如果它在几次GC pass 中一直是空的（在iOS上写的时候是8个pass），那么这个区块就会从内存中被去除（也就是说，它的物理内存被退回给系统）。但是GC分配的虚拟内存地址空间永远不会被释放，也不能被游戏中的任何其他分配器使用。
+Mono Heap是以块的形式分配的，它存储类似大小的管理对象。每个区块可以存储一定数量的对象，如果它在几次GC 中一直是空的（在iOS上写的时候是8个pass），那么这个区块就会从内存中被去除（也就是说，它的物理内存被退回给系统）。但是GC分配的虚拟内存地址空间永远不会被释放，也不能被游戏中的任何其他分配器使用。
 
 内存块的问题是，它们通常是零散的，可能只包含数千个容量中的几个对象。这样的内存块仍然被认为是使用过的，所以它们的物理内存不能归还到系统中。不幸的是，这通常是现实世界中的情况，而很容易构建一个人为的例子，Mono Heap常驻内存会随意增长和缩小。
 
