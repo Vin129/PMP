@@ -26,7 +26,7 @@
 
 相对与物理内存而言，虚拟内存就显得那么的不好理解了。
 
-![](\Textures\sUIOSM3.jpg)
+![](.\Textures\sUIOSM3.jpg)
 
 **虚拟内存到物理内存的映射发生在对内存的第一次使用(e.g读写)**  
 
@@ -36,7 +36,7 @@
 
 与物理内存产生映射关系的部分：Resident Memory 常驻内存
 
-![](\Textures\sUIOSM4.jpg)
+![](.\Textures\sUIOSM4.jpg)
 
 常驻内存又分为 Clean/Dirty Memory
 
@@ -54,13 +54,13 @@ Dirty Memory  则区别与Clean Memory，这是无法被系统所清除的内存
 
 这有个例子，分配了20000个integers组成的数组，此时会有page被创建，如果将第一个元素和最后一个元素赋值，则第一个page和最后一个page会变成dirty，而中间部分则是clean。
 
-![](\Textures\sUIOSM6.jpg)
+![](.\Textures\sUIOSM6.jpg)
 
 
 
 ### Malloc Heap
 
-![](\Textures\sUIOSM7.jpg)
+![](.\Textures\sUIOSM7.jpg)
 
 应用申请内存的地方。Unity的内存申请行为都会发生在这里，通过malloc 和calloc 函数进行内存申请
 
@@ -72,9 +72,9 @@ Dirty Memory  则区别与Clean Memory，这是无法被系统所清除的内存
 
 它属于赃内存。当应用内存不足的时候，OS会将脏内存中使用频次较少的内存进行压缩存放。等需要使用的时候再重新解压出来。
 
-![](\Textures\sUIOSM8.jpg)
+![](.\Textures\sUIOSM8.jpg)
 
-![](\Textures\sUIOSM9.jpg)
+![](.\Textures\sUIOSM9.jpg)
 
 
 
@@ -84,7 +84,7 @@ Native Memory是游戏Malloc Heap的一部分，用于Unity所需的内存分配
 
 所有的资产数据也在Native Memory中，以一直轻量的封装(lightweight wrappers)暴露给C#
 
-![](\Textures\sUIOSM10.jpg)
+![](.\Textures\sUIOSM10.jpg)
 
 ### Mono Heap
 
@@ -98,7 +98,7 @@ Mono Heap 在 Native Memory 上是不连续的
 
 当一个块经过8次GC后任然未被使用，则它的物理内存会被释放。
 
-![](\Textures\sUIOSM11.jpg)
+![](.\Textures\sUIOSM11.jpg)
 
 
 
@@ -127,7 +127,7 @@ Mono Heap 在 Native Memory 上是不连续的
 
 ## **GPU Driver Memory**
 
-![](\Textures\sUIOSM5.jpg)
+![](.\Textures\sUIOSM5.jpg)
 
 
 
