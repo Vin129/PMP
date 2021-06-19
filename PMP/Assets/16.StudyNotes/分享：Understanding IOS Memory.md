@@ -78,6 +78,56 @@ Dirty Memory  则区别与Clean Memory，这是无法被系统所清除的内存
 
 
 
+压缩内存   《OS X Mavericks Core Technology Overview》
+
+压缩内存可以在你最需要的时候释放内存，从而使你的 Mac 保持快速和响应。
+
+在你最需要的时候释放内存。当你的系统内存开始耗尽时，压缩内存会
+
+自动压缩内存中最近使用最少的项目，将它们压缩到
+
+约为其原始大小的一半。当再次需要这些项目时，它们可以立即被
+
+解压缩。
+
+压缩内存提高了系统的总带宽和响应速度，使你的 Mac 能够处理大量数据。
+
+你的 Mac 能更有效地处理大量的数据。通过使用字典
+
+的WKdm算法（dictionary-based WKdm algorithm），压缩和解压的速度比读取和写入磁盘的速度快。
+
+写入磁盘。如果你的Mac需要在磁盘上交换文件，压缩后的对象会被存储在全尺寸的片段中。
+
+在全尺寸段中存储，这提高了读/写效率，减少了固态硬盘和闪存驱动器的磨损。
+
+对固态硬盘和闪存驱动器的磨损。压缩内存的优点包括以下几点。
+
+\+ Shrinks memory usage.  缩减内存用量。压缩内存将内存中最近没有使用过的项目的大小减少了50%以上，为你目前正在使用的应用程序释放内存。
+
+\+ Improves power efficiency. 提高能源效率。压缩内存减少了在磁盘上读写虚拟内存交换文件的需要，提高了 Mac 的电源效率。
+
+\+ Minimizes CPU usage.  最大限度地减少CPU的使用。压缩内存的速度非常快，压缩或解压一页内存只需几百万分之一秒的时间。
+
+\+ Is multicore aware.  具有多核意识。与传统的虚拟内存不同，压缩内存可以在多个 CPU 内核上并行运行，在回收未使用的内存和访问内存中很少使用的对象方面，都能实现快如闪电的性能。
+
+
+
+**内存压缩使得释放内存变得复杂：**
+
+假如我们有一个Dictionary 对象占用了3个page的内存空间，内存压缩可以将它压缩到一个page大小，这是可以多出两个可以的内存空间。
+
+但如果我们因为收到了内存警告，决定亲自去移除这个dictionary中的一些数据。
+
+首先被压缩的Ditionary会被解压为3个page，然后我们操作移除，使得它的大小变为1个page。实际上是对内存没任何减小的。
+
+![](.\Textures\sUIOSM8.jpg)
+
+![](.\Textures\sUIOSM9.jpg)
+
+
+
+
+
 ### Native (Unity) Memory
 
 Native Memory是游戏Malloc Heap的一部分，用于Unity所需的内存分配，包括Mono Heap。
@@ -131,6 +181,14 @@ Mono Heap 在 Native Memory 上是不连续的
 
 
 
+## Memory Footprint
+
+
+
+
+
+
+
 
 
 
@@ -166,3 +224,8 @@ https://zhuanlan.zhihu.com/p/87310853
 https://docs.google.com/document/d/1J5wbf0Q2KWEoerfFzVcwXk09dV_l1AXJHREIKUjnh3c/edit
 
 https://developer.apple.com/videos/play/wwdc2018/416/
+
+https://blog.csdn.net/cdy15626036029/article/details/81014959
+
+https://v.youku.com/v_show/id_XMzIwNjQ5MjkyOA==.html
+
